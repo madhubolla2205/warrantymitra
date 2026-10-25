@@ -303,6 +303,8 @@ if run("5"):
     ok = find("Map pin saved") is not None
     check(S, "GPS position saved", ok, shot("shop-gps"))
     check(S, "City filled from the location", find("Hyderabad") is not None, note="geocoder may be unavailable on the emulator")
+    plus = [label(n) for n in dump() if re.search(r"\b[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}\b", label(n))]
+    check(S, "Shop address is readable (no Plus Code like C9XR+8H5)", not plus, note=("found: " + plus[0]) if plus else "")
     pin = find("5000", contains=True)
     check(S, "PIN code filled from the location", pin is not None, note="" if pin is not None else "no 5000xx PIN on screen")
     save_item()
@@ -354,7 +356,8 @@ if run("8"):
             "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission")
         time.sleep(4)
         shot("bill-photo-shared")
-        check(S, "Add form opens with the photo attached", seek("Photo saved") is not None, shot("bill-photo-saved"))
+        check(S, "Add form opens with the photo attached", seek("Photo saved") is not None, shot("bill-photo-saved"),
+          note="" if find("Couldn't open the shared photo") is None else "app showed: couldn't open the shared photo")
     else:
         check(S, "Add form opens with the photo attached", False, note="could not register the test image with the gallery")
 

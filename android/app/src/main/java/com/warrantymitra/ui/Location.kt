@@ -10,6 +10,8 @@ import android.os.Looper
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import com.warrantymitra.domain.readableAddress
+import com.warrantymitra.domain.stripPlusCode
 import java.util.Locale
 import kotlin.concurrent.thread
 
@@ -34,7 +36,10 @@ fun fetchCurrentPlace(context: Context, onResult: (Place?) -> Unit) {
 private fun reverseGeocode(context: Context, lat: Double, lng: Double, done: (Place) -> Unit) {
     fun toPlace(a: Address?) = Place(
         lat, lng,
-        address = a?.let { listOfNotNull(it.featureName?.takeIf { f -> !f.all(Char::isDigit) }, it.subLocality).distinct().joinToString(", ").ifBlank { it.getAddressLine(0) } },
+        address = a?.let {
+            val street = listOfNotNull(it.subThoroughfare, it.thoroughfare).joinToString(" ")
+            readableAddress(street, it.subLocality).ifBlank { it.getAddressLine(0)?.let(::stripPlusCode) }
+        },
         city = a?.locality ?: a?.subAdminArea,
         pin = a?.postalCode,
     )

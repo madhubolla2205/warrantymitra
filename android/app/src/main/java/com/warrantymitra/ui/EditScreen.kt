@@ -109,13 +109,22 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
             }
             ShareInbox.imageUri?.let { uri ->
                 ShareInbox.imageUri = null
-                vm.importBillPhoto(uri)?.let { f = f.copy(billPhotoPath = it); note = "Bill photo added. Fill in the details below." }
+                val path = vm.importBillPhoto(uri)
+                if (path != null) {
+                    f = f.copy(billPhotoPath = path)
+                    note = "Bill photo added. Fill in the details below."
+                } else {
+                    note = "Couldn't open the shared photo. Use \"Add bill photo\" below to pick it from your gallery."
+                }
             }
         }
     }
 
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri != null) scope.launch { vm.importBillPhoto(uri)?.let { f = f.copy(billPhotoPath = it) } }
+        if (uri != null) scope.launch {
+            val path = vm.importBillPhoto(uri)
+            if (path != null) f = f.copy(billPhotoPath = path) else note = "Couldn't save that photo. Try another one."
+        }
     }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants.values.any { it }) {
