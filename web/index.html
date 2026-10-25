@@ -1,0 +1,779 @@
+<title>WarrantyMitra</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@600;700&family=Mukta:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one calm column like a bill folder; each product is a "slip" with a perforated edge; detail view stacks coverage, store, damage check, next steps. */
+:root{
+  --bg:#f2f4ef; --surface:#ffffff; --sunk:#e7ebe3; --ink:#15302a; --muted:#5b6d66; --line:#cfd8d0;
+  --accent:#d98a0b; --accent-ink:#5a3600; --accent-soft:#fbecd0; --teal:#1f6f63; --teal-soft:#dcefe9;
+  --ok:#1f7a4d; --ok-soft:#dcf1e5; --warn:#a86200; --warn-soft:#fdebc8; --bad:#b3372b; --bad-soft:#f8dedb;
+  --display:"Baloo Bhai 2","Mukta",system-ui,sans-serif; --body:"Mukta",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1916; --surface:#16231f; --sunk:#1d2d28; --ink:#e4eee9; --muted:#9db0a8; --line:#2c3f39;
+  --accent:#f0a830; --accent-ink:#ffe2ad; --accent-soft:#3a2b10; --teal:#5cc2b0; --teal-soft:#183a34;
+  --ok:#5fd194; --ok-soft:#173326; --warn:#f2b955; --warn-soft:#3a2c12; --bad:#f08a7e; --bad-soft:#3d1c19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1916; --surface:#16231f; --sunk:#1d2d28; --ink:#e4eee9; --muted:#9db0a8; --line:#2c3f39;
+  --accent:#f0a830; --accent-ink:#ffe2ad; --accent-soft:#3a2b10; --teal:#5cc2b0; --teal-soft:#183a34;
+  --ok:#5fd194; --ok-soft:#173326; --warn:#f2b955; --warn-soft:#3a2c12; --bad:#f08a7e; --bad-soft:#3d1c19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 64px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:1.7rem} h2{font-size:1.35rem} h3{font-size:1.08rem}
+p{margin:0}
+a{color:var(--teal)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+.label{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:6px 14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.brand small{display:block;font-size:.85rem;color:var(--muted);font-family:var(--body)}
+nav.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:999px;flex-wrap:wrap}
+nav.tabs button{border:0;background:transparent;color:var(--ink);font:500 .95rem var(--body);padding:6px 14px;border-radius:999px;cursor:pointer}
+nav.tabs button[aria-current="page"]{background:var(--surface);box-shadow:0 1px 2px rgb(0 0 0/.12)}
+button,.btn{font:500 .95rem var(--body);border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;line-height:1.3}
+button:hover,.btn:hover{border-color:var(--teal)}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--teal);border-color:var(--teal);color:var(--surface)}
+.primary:hover{filter:brightness(1.08)}
+.danger{color:var(--bad)}
+.ghost{background:transparent;border-color:transparent;color:var(--teal);padding-inline:6px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.banner{background:var(--accent-soft);color:var(--accent-ink);border-radius:var(--r);padding:10px 14px;font-size:.92rem;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.stat b{display:block;font-family:var(--display);font-size:1.5rem;line-height:1.2;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:.88rem;cursor:pointer;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.list{display:grid;gap:12px}
+.slip{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:14px 16px 14px 22px;position:relative;cursor:pointer;text-align:left;width:100%;color:var(--ink);font:inherit}
+.slip::before{content:"";position:absolute;left:8px;top:10px;bottom:10px;border-left:2px dotted var(--line)}
+.slip:hover{border-color:var(--teal)}
+.slip .meta{min-width:0}
+.slip .meta p{overflow-wrap:anywhere}
+.slip .right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:500;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.none{background:var(--sunk);color:var(--muted)}
+.pill.tag{background:var(--sunk);color:var(--muted)} .pill.sample{background:var(--accent-soft);color:var(--accent-ink)}
+.bar{grid-column:1/-1;height:6px;background:var(--sunk);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--teal);border-radius:99px}
+.bar.warn i{background:var(--warn)} .bar.bad i{background:var(--bad)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;display:grid;gap:12px;justify-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;min-width:0}
+.stack{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+form .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+@media (max-width:560px){form .fields{grid-template-columns:1fr}}
+.f{display:grid;gap:3px;min-width:0}
+.f.full{grid-column:1/-1}
+.f label{font-size:.86rem;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;font-size:.98rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+fieldset{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px 14px;margin:0;display:grid;gap:10px;min-width:0}
+legend{font-family:var(--display);font-weight:700;font-size:1.02rem;padding:0 6px}
+.checks{display:flex;gap:6px 16px;flex-wrap:wrap}
+.checks label{display:flex;gap:6px;align-items:center;font-size:.95rem;color:var(--ink)}
+.checks input{width:auto}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:.92rem;display:flex;align-items:center;gap:6px}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg label:has(input:checked){background:var(--teal-soft);border-color:var(--teal);color:var(--ink)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.kv{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:4px 14px;font-size:.95rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;overflow-wrap:anywhere}
+.timeline{position:relative;display:grid;gap:8px;padding-top:4px}
+.track{position:relative;height:26px;background:var(--sunk);border-radius:6px}
+.track .seg1{position:absolute;top:0;bottom:0;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:.78rem;font-weight:500;white-space:nowrap;overflow:hidden}
+.seg1.maker{background:var(--teal-soft);color:var(--teal)} .seg1.plan{background:var(--accent-soft);color:var(--accent-ink)}
+.today{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.verdict{border-radius:var(--r);padding:12px 14px;display:grid;gap:6px}
+.verdict.ok{background:var(--ok-soft)} .verdict.warn{background:var(--warn-soft)} .verdict.bad{background:var(--bad-soft)}
+.verdict h3{font-size:1.05rem}
+.verdict.ok h3{color:var(--ok)} .verdict.warn h3{color:var(--warn)} .verdict.bad h3{color:var(--bad)}
+blockquote{margin:0;border-left:3px solid var(--accent);padding:4px 10px;font-size:.93rem;background:var(--surface);border-radius:0 6px 6px 0}
+ol.steps,ul.plain{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.bill{max-height:260px;border-radius:8px;border:1px solid var(--line);object-fit:contain;background:var(--sunk)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table.cmp{border-collapse:collapse;width:100%;min-width:860px;font-size:.9rem}
+table.cmp th,table.cmp td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+table.cmp thead th{font-family:var(--display);font-size:.95rem;background:var(--sunk);position:sticky;top:0}
+table.cmp th[scope="row"]{font-weight:500;width:220px}
+table.cmp td.us,table.cmp th.us{background:var(--teal-soft)}
+.mk{font-weight:700;font-family:var(--mono)}
+.mk.y{color:var(--ok)} .mk.p{color:var(--warn)} .mk.n{color:var(--bad)} .mk.q{color:var(--muted)}
+.note{display:block;color:var(--muted);font-size:.8rem;line-height:1.35}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:.92rem;z-index:20;max-width:calc(100% - 32px)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.sel{user-select:all}
+.backrow{margin-bottom:10px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="3" width="30" height="34" rx="4" fill="var(--teal)"/><path d="M5 31 l5 4 5-4 5 4 5-4 5 4 5-4V37H5z" fill="var(--bg)"/><path d="M13 17 l5 5 9-10" stroke="var(--accent)" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h1>WarrantyMitra</h1><small>Is it still covered? Check before you pay for repair.</small></div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-view="list" aria-current="page">My items</button>
+      <button type="button" data-view="form">Add item</button>
+      <button type="button" data-view="compare">How it compares</button>
+    </nav>
+  </header>
+  <div id="modeBanner" class="banner" hidden></div>
+  <main id="app"></main>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(() => {
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAY = 864e5;
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const parseD = s => { if (!s) return null; const [y,m,d] = String(s).split('-').map(Number); if (!y||!m||!d) return null; return new Date(y, m-1, d); };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
+const addMonths = (d, n) => { const r = new Date(d); const day = r.getDate(); r.setDate(1); r.setMonth(r.getMonth()+n); const last = new Date(r.getFullYear(), r.getMonth()+1, 0).getDate(); r.setDate(Math.min(day,last)); return r; };
+const fmtD = d => d ? d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '—';
+const inr = n => (n || n === 0) && !isNaN(n) ? new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:0}).format(n) : '—';
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const enc = encodeURIComponent;
+
+const CATEGORIES = ['Mobile phone','Laptop / tablet','TV','Refrigerator','Washing machine','Air conditioner','Water purifier','Kitchen appliance','Fan / cooler','Furniture','Mattress','Two-wheeler','Car','Inverter / battery','Watch / wearable','Camera','Other'];
+const PLATFORMS = ['Amazon','Flipkart','Croma','Reliance Digital','Vijay Sales','JioMart','Tata CLiQ','Myntra','Brand website','Other online'];
+const PAYMENTS = ['UPI','Credit card','Debit card','EMI','Cash','Net banking'];
+const OWNERS = ['Me','Amma','Nanna','Spouse','Kids','Home'];
+const ORDER_LINKS = {Amazon:'https://www.amazon.in/gp/css/order-history', Flipkart:'https://www.flipkart.com/account/orders', Croma:'https://www.croma.com/my-account', 'Reliance Digital':'https://www.reliancedigital.in/', 'Vijay Sales':'https://www.vijaysales.com/', JioMart:'https://www.jiomart.com/', 'Tata CLiQ':'https://www.tatacliq.com/', Myntra:'https://www.myntra.com/my/orders'};
+const PROBLEMS = [
+  ['defect','Stopped working on its own'],
+  ['drop','Dropped, cracked or broken'],
+  ['liquid','Water or liquid damage'],
+  ['surge','Power cut or voltage fluctuation'],
+  ['wear','Battery, remote or consumable part'],
+  ['theft','Lost or stolen'],
+];
+
+const state = { items: [], mode: 'loading', view: 'list', currentId: null, filter: 'all', editingId: null, check: null, confirmDelete: null, caps: {} };
+let dbCol = null;
+
+/* ---------- coverage maths ---------- */
+function coverage(it) {
+  const p = parseD(it.purchaseDate); if (!p) return null;
+  const makerEnd = addDays(addMonths(p, +it.warrantyMonths || 0), -1);
+  let planStart = null, planEnd = null;
+  if (it.ext && +it.ext.months > 0) {
+    planStart = it.ext.start === 'purchase' ? p : addDays(makerEnd, 1);
+    planEnd = addDays(addMonths(planStart, +it.ext.months), -1);
+  }
+  const end = planEnd && planEnd > makerEnd ? planEnd : makerEnd;
+  const t = today();
+  const daysLeft = Math.round((end - t) / DAY);
+  const span = Math.max(1, (end - p) / DAY);
+  const used = Math.min(1, Math.max(0, (t - p) / DAY / span));
+  return { p, makerEnd, planStart, planEnd, end, daysLeft, used, span,
+    inMaker: t >= p && t <= makerEnd, inPlan: !!planEnd && t >= planStart && t <= planEnd };
+}
+function status(c) {
+  if (!c) return { k: 'none', label: 'No date' };
+  if (c.daysLeft < 0) return { k: 'bad', label: 'Expired' };
+  if (c.daysLeft <= 30) return { k: 'warn', label: c.daysLeft === 0 ? 'Ends today' : `Ends in ${c.daysLeft} day${c.daysLeft === 1 ? '' : 's'}` };
+  return { k: 'ok', label: 'Covered' };
+}
+function amcDue(it) { const d = parseD(it.amcDate); if (!d) return null; return { d, days: Math.round((d - today()) / DAY) }; }
+
+/* ---------- storage ---------- */
+const LS = 'warrantymitra-items-v1';
+const local = {
+  load() { try { return JSON.parse(localStorage.getItem(LS) || '[]'); } catch { return []; } },
+  write(a) { try { localStorage.setItem(LS, JSON.stringify(a)); } catch {} }
+};
+const clean = o => JSON.parse(JSON.stringify(o));
+function upsertLocal(it) { const i = state.items.findIndex(x => x.id === it.id); if (i >= 0) state.items[i] = it; else state.items.push(it); }
+async function saveItem(it) {
+  it.updatedAt = Date.now();
+  upsertLocal(it);
+  if (dbCol) { try { await dbCol.doc(it.id).set(clean(it)); } catch (e) { toast('Could not save to your account. Try again.'); } }
+  else local.write(state.items);
+}
+async function removeItem(id) {
+  state.items = state.items.filter(x => x.id !== id);
+  if (dbCol) { try { await dbCol.doc(id).delete(); } catch { toast('Could not delete. Try again.'); } }
+  else local.write(state.items);
+}
+function setBanner(text) { const b = $('#modeBanner'); b.hidden = !text; b.textContent = text || ''; }
+
+async function boot() {
+  state.items = local.load();
+  render();
+  if (!window.claude || !window.claude.use) { state.mode = 'local'; setBanner('Saved only in this browser. Open this page in Claude to keep your items in your account.'); render(); return; }
+  const [db, user, sample, assets, downloads] = await Promise.all(['db','user','sample','assets','downloads'].map(n => window.claude.use(n).catch(() => null)));
+  state.caps = { sample, assets, downloads };
+  if (sample && sample.limits) { try { const l = await sample.limits(); state.caps.images = !!(l && l.images); } catch { state.caps.images = false; } }
+  let id = null;
+  if (db && user) { try { id = await user.id(); } catch {} }
+  if (!db || !id) { state.mode = 'local'; setBanner('Saved only in this browser. Sign in to Claude to keep your items in your account.'); render(); return; }
+  dbCol = db.collection('data/users/' + id);
+  const pendingLocal = state.items.slice();
+  let first = true;
+  dbCol.onSnapshot(snap => {
+    state.items = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    state.mode = 'db'; setBanner('');
+    if (first) { first = false; if (snap.empty && pendingLocal.length) { pendingLocal.forEach(it => dbCol.doc(it.id).set(clean(it)).catch(() => {})); } }
+    render();
+  }, () => { dbCol = null; state.mode = 'local'; state.items = local.load(); setBanner('Your account storage is unavailable right now, so items are saved in this browser only.'); render(); });
+}
+
+/* ---------- UI helpers ---------- */
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+function go(view, id) {
+  state.view = view; if (id !== undefined) state.currentId = id;
+  if (view !== 'item') state.check = null;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.view === (view === 'item' ? 'list' : view) ? 'page' : 'false'));
+  render(); window.scrollTo({ top: 0 });
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => { if (b.dataset.view === 'form') state.editingId = null; go(b.dataset.view); }));
+
+function render() {
+  const app = $('#app');
+  if (state.view === 'list') app.innerHTML = listView();
+  else if (state.view === 'form') { app.innerHTML = formView(); wireForm(); }
+  else if (state.view === 'item') { app.innerHTML = itemView(); wireItem(); }
+  else if (state.view === 'compare') app.innerHTML = compareView();
+  wireCommon();
+}
+
+/* ---------- list ---------- */
+function listView() {
+  const items = state.items.slice().map(it => ({ it, c: coverage(it) }));
+  items.sort((a, b) => {
+    const da = a.c ? (a.c.daysLeft < 0 ? 1e6 - a.c.daysLeft : a.c.daysLeft) : 2e6;
+    const db_ = b.c ? (b.c.daysLeft < 0 ? 1e6 - b.c.daysLeft : b.c.daysLeft) : 2e6;
+    return da - db_;
+  });
+  const active = items.filter(x => x.c && x.c.daysLeft >= 0);
+  const soon = active.filter(x => x.c.daysLeft <= 30);
+  const value = active.reduce((s, x) => s + (+x.it.price || 0), 0);
+  const claims = items.filter(x => x.it.claim && x.it.claim.status && !['', 'Closed'].includes(x.it.claim.status)).length;
+  const f = state.filter;
+  const shown = items.filter(({ it, c }) =>
+    f === 'all' ? true : f === 'soon' ? c && c.daysLeft >= 0 && c.daysLeft <= 30 : f === 'expired' ? c && c.daysLeft < 0 :
+    f === 'amc' ? !!it.amcDate : f === 'claims' ? it.claim && it.claim.status && it.claim.status !== 'Closed' : (it.owner || 'Me') === f);
+  const owners = [...new Set(state.items.map(it => it.owner || 'Me'))];
+  const chip = (k, l) => `<button type="button" class="chip" data-filter="${esc(k)}" aria-pressed="${f === k}">${esc(l)}</button>`;
+
+  if (state.mode === 'loading' && !state.items.length) return `<div class="empty"><span class="spin" aria-hidden="true"></span><p class="muted">Opening your warranty folder…</p></div>`;
+  if (!state.items.length) return `
+    <div class="empty">
+      <h2>Your warranty folder is empty</h2>
+      <p class="muted">Add a product with its bill, purchase date, the store you bought it from, and how long the warranty runs. WarrantyMitra counts down to the end date, reminds you before it lapses, and tells you whether a repair should be free.</p>
+      <div class="row"><button type="button" class="primary" data-act="add">Add your first item</button><button type="button" data-act="samples">Try with 4 sample items</button></div>
+      <p class="small muted">Sample items are labelled "Sample" and you can delete them any time.</p>
+    </div>`;
+
+  return `
+    <section class="stats" aria-label="Summary">
+      <div class="stat"><span class="label">Value under warranty</span><b>${inr(value)}</b><span class="small muted">${active.length} of ${items.length} items covered</span></div>
+      <div class="stat"><span class="label">Ending in 30 days</span><b style="color:${soon.length ? 'var(--warn)' : 'inherit'}">${soon.length}</b><span class="small muted">${soon[0] ? esc(soon[0].it.product) + ' first' : 'Nothing urgent'}</span></div>
+      <div class="stat"><span class="label">Open claims</span><b>${claims}</b><span class="small muted">${claims ? 'Track them in each item' : 'No repairs in progress'}</span></div>
+    </section>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <div class="filters" role="group" aria-label="Filter">${chip('all','All')}${chip('soon','Ending soon')}${chip('expired','Expired')}${chip('amc','AMC')}${chip('claims','Claims')}${owners.length > 1 ? owners.map(o => chip(o, o)).join('') : ''}</div>
+      <div class="row">${state.caps.downloads ? `<button type="button" data-act="icsAll">Add all reminders to calendar</button><button type="button" class="ghost" data-act="backup">Back up</button>` : ''}</div>
+    </div>
+    <div class="list">${shown.length ? shown.map(slip).join('') : `<p class="muted">No items match this filter.</p>`}</div>`;
+}
+function slip({ it, c }) {
+  const s = status(c); const amc = amcDue(it);
+  const where = it.channel === 'online' ? (it.platform || 'Online') + (it.storeName ? ' · ' + it.storeName : '') : [it.storeName, it.city].filter(Boolean).join(', ');
+  return `<button type="button" class="slip" data-open="${esc(it.id)}">
+    <div class="meta">
+      <h3>${esc(it.product || 'Untitled item')}</h3>
+      <p class="small muted">${esc([it.brand, it.model].filter(Boolean).join(' · '))}${where ? ' · Bought at ' + esc(where) : ''}</p>
+      <p class="small"><span class="muted">Bought</span> <span class="mono">${fmtD(c && c.p)}</span> · <span class="muted">Covered till</span> <span class="mono">${fmtD(c && c.end)}</span>${c && c.planEnd ? ' <span class="muted">(incl. plan)</span>' : ''}</p>
+    </div>
+    <div class="right">
+      <span class="pill ${s.k}">${esc(s.label)}</span>
+      ${amc && amc.days >= 0 && amc.days <= 30 ? `<span class="pill warn">AMC due ${fmtD(amc.d)}</span>` : ''}
+      ${it.claim && it.claim.status && it.claim.status !== 'Closed' ? `<span class="pill tag">Claim: ${esc(it.claim.status)}</span>` : ''}
+      ${it.owner && it.owner !== 'Me' ? `<span class="pill tag">${esc(it.owner)}</span>` : ''}
+      ${it.sample ? '<span class="pill sample">Sample</span>' : ''}
+    </div>
+    ${c ? `<div class="bar ${s.k === 'ok' ? '' : s.k}" aria-hidden="true"><i style="width:${Math.round(c.used * 100)}%"></i></div>` : ''}
+  </button>`;
+}
+
+/* ---------- samples ---------- */
+function sampleItems() {
+  const t = today(); const ago = (m, d = 0) => iso(addDays(addMonths(t, -m), -d));
+  return [
+    { product: 'Galaxy S24 FE', brand: 'Samsung', category: 'Mobile phone', model: 'SM-S721B', serial: '35••••••••4821', purchaseDate: ago(11, 12), warrantyMonths: 12, ext: { provider: 'Flipkart Complete Mobile Protection', months: 12, start: 'purchase', accidental: true, liquid: true }, price: 35999, invoiceNo: 'FAAB2K24001738', payment: 'Credit card', channel: 'online', platform: 'Flipkart', storeName: 'RetailNet (seller)', storeAddress: '', city: 'Hyderabad', pin: '500081', storePhone: '', owner: 'Me', remindDays: [30, 10, 1], terms: 'The warranty covers manufacturing defects for 12 months from the date of purchase. Physical damage, liquid damage, and damage due to unauthorised repair are not covered. Battery is covered for 6 months.' },
+    { product: 'Front-load washing machine 7 kg', brand: 'LG', category: 'Washing machine', model: 'FHM1207SDW', serial: '304KWXX0Q912', purchaseDate: ago(20), warrantyMonths: 24, ext: { provider: 'Onsitego extended warranty', months: 24, start: 'after', accidental: false, liquid: false }, price: 31490, invoiceNo: 'CR/HYD/24-25/08817', payment: 'EMI', channel: 'store', platform: '', storeName: 'Croma', storeAddress: 'Inorbit Mall, Madhapur', city: 'Hyderabad', pin: '500081', storePhone: '040 4000 0000', owner: 'Amma', remindDays: [30, 10], terms: 'Motor carries 10 years warranty. Damage caused by voltage fluctuation, rodents, or improper installation is excluded.' },
+    { product: 'RO + UV water purifier', brand: 'Kent', category: 'Water purifier', model: 'Grand Plus', serial: '', purchaseDate: ago(14), warrantyMonths: 12, ext: null, amcDate: iso(addDays(t, 18)), price: 15500, invoiceNo: 'SLE-2291', payment: 'UPI', channel: 'store', platform: '', storeName: 'Sri Lakshmi Electronics', storeAddress: 'Main Road, Ameerpet', city: 'Hyderabad', pin: '500016', storePhone: '98480 00000', owner: 'Home', remindDays: [10], terms: 'Filters, membrane and consumables are not covered under warranty.' },
+    { product: 'Ceiling fan 1200 mm', brand: 'Atomberg', category: 'Fan / cooler', model: 'Renesa', serial: '', purchaseDate: ago(26), warrantyMonths: 24, ext: null, price: 3799, invoiceNo: '402-118822-77', payment: 'Debit card', channel: 'online', platform: 'Amazon', storeName: 'Appario Retail', storeAddress: '', city: 'Vijayawada', pin: '520010', storePhone: '', owner: 'Nanna', remindDays: [10], terms: '' },
+  ].map(x => ({ ...x, id: uid(), sample: true, createdAt: Date.now() }));
+}
+
+/* ---------- form ---------- */
+function opt(list, v) { return list.map(x => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join(''); }
+function formView() {
+  const it = state.items.find(x => x.id === state.editingId) || { channel: 'store', warrantyMonths: 12, remindDays: [30, 10, 1], owner: 'Me', purchaseDate: iso(today()) };
+  const ext = it.ext || {};
+  const rd = it.remindDays || [];
+  const ai = !!state.caps.sample;
+  return `
+  <div class="stack">
+    ${state.editingId ? `<div class="backrow"><button type="button" class="ghost" data-open="${esc(it.id)}">← Back to ${esc(it.product)}</button></div>` : ''}
+    <h2>${state.editingId ? 'Edit item' : 'Add an item'}</h2>
+    ${state.editingId ? '' : `
+    <div class="card">
+      <h3>Fill it in for me</h3>
+      <p class="small muted">Paste an order email or SMS from Amazon, Flipkart, Croma, Reliance Digital or a shop's bill message${state.caps.images ? ', or add a photo of the bill' : ''}. ${ai ? 'Claude reads it and fills the form below.' : 'The form picks out the date, amount and order number.'} Check the fields before saving.</p>
+      <div class="f"><label for="importText">Order email or SMS</label><textarea id="importText" placeholder="Your order of Samsung Galaxy S24 FE has been delivered. Order ID OD1234… Total ₹35,999 · Delivered on 12 Nov 2025"></textarea></div>
+      <div class="row"><button type="button" id="importBtn">Fill the form from this text</button><span id="importMsg" class="small muted" role="status"></span></div>
+    </div>`}
+    <form id="itemForm" class="stack" novalidate>
+      <fieldset><legend>Product</legend><div class="fields">
+        <div class="f full"><label for="f_product">Product name *</label><input id="f_product" required value="${esc(it.product)}" placeholder="Front-load washing machine 7 kg"></div>
+        <div class="f"><label for="f_brand">Brand</label><input id="f_brand" value="${esc(it.brand)}" placeholder="LG"></div>
+        <div class="f"><label for="f_category">Category</label><select id="f_category">${opt(CATEGORIES, it.category || 'Other')}</select></div>
+        <div class="f"><label for="f_model">Model</label><input id="f_model" value="${esc(it.model)}"></div>
+        <div class="f"><label for="f_serial">Serial no. / IMEI</label><input id="f_serial" class="mono" value="${esc(it.serial)}"></div>
+        <div class="f"><label for="f_owner">Whose is it?</label><select id="f_owner">${opt(OWNERS, it.owner || 'Me')}</select></div>
+      </div></fieldset>
+
+      <fieldset><legend>Purchase and bill</legend><div class="fields">
+        <div class="f"><label for="f_date">Purchase date *</label><input id="f_date" type="date" required value="${esc(it.purchaseDate)}"></div>
+        <div class="f"><label for="f_price">Price paid (₹)</label><input id="f_price" type="number" inputmode="numeric" min="0" step="1" value="${esc(it.price)}"></div>
+        <div class="f"><label for="f_invoice">Invoice / order no.</label><input id="f_invoice" class="mono" value="${esc(it.invoiceNo)}" placeholder="GST invoice or order ID"></div>
+        <div class="f"><label for="f_payment">Paid by</label><select id="f_payment"><option value="">Choose</option>${opt(PAYMENTS, it.payment)}</select></div>
+        <div class="f full" id="billBox"><label for="f_bill">Bill or warranty card photo</label>
+          <input id="f_bill" type="file" accept="image/*,application/pdf">
+          <div id="billPreview" class="row">${it.billUrl ? `<img class="bill" src="${esc(it.billUrl)}" alt="Saved bill photo">` : ''}</div>
+          <div class="row">${state.caps.images ? '<button type="button" id="readBill" hidden>Read details from this photo</button>' : ''}<span id="billMsg" class="small muted" role="status"></span></div>
+        </div>
+      </div></fieldset>
+
+      <fieldset><legend>Where you bought it</legend>
+        <div class="seg" role="radiogroup" aria-label="Bought">
+          <label><input type="radio" name="channel" value="store" ${it.channel !== 'online' ? 'checked' : ''}>In a shop</label>
+          <label><input type="radio" name="channel" value="online" ${it.channel === 'online' ? 'checked' : ''}>Online</label>
+        </div>
+        <div class="fields">
+          <div class="f" id="platformBox" ${it.channel === 'online' ? '' : 'hidden'}><label for="f_platform">Website or app</label><select id="f_platform"><option value="">Choose</option>${opt(PLATFORMS, it.platform)}</select></div>
+          <div class="f"><label for="f_store" id="storeLabel">${it.channel === 'online' ? 'Seller name' : 'Shop name'}</label><input id="f_store" value="${esc(it.storeName)}" placeholder="${it.channel === 'online' ? 'Appario Retail' : 'Sri Lakshmi Electronics'}"></div>
+          <div class="f"><label for="f_phone">Shop phone</label><input id="f_phone" type="tel" value="${esc(it.storePhone)}"></div>
+          <div class="f full"><label for="f_address">Shop address or area</label><input id="f_address" value="${esc(it.storeAddress)}" placeholder="Inorbit Mall, Madhapur"></div>
+          <div class="f"><label for="f_city">City / town</label><input id="f_city" value="${esc(it.city)}" placeholder="Hyderabad"></div>
+          <div class="f"><label for="f_pin">PIN code</label><input id="f_pin" class="mono" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" value="${esc(it.pin)}" placeholder="500081"></div>
+        </div>
+        <p class="small muted">The PIN code is also used to find the nearest authorised service centre when you need a repair.</p>
+      </fieldset>
+
+      <fieldset><legend>Warranty</legend><div class="fields">
+        <div class="f"><label for="f_months">Maker's warranty (months)</label><input id="f_months" type="number" min="0" max="240" value="${esc(it.warrantyMonths)}"></div>
+        <div class="f"><label for="f_amc">Next AMC or service due (optional)</label><input id="f_amc" type="date" value="${esc(it.amcDate)}"></div>
+        <div class="f"><label for="f_extp">Extended warranty or protection plan</label><input id="f_extp" value="${esc(ext.provider)}" placeholder="Onsitego, Amazon/Flipkart protection, brand plan"></div>
+        <div class="f"><label for="f_extm">Plan length (months)</label><input id="f_extm" type="number" min="0" max="120" value="${esc(ext.months)}"></div>
+        <div class="f full"><span class="label">Plan starts</span><div class="seg">
+          <label><input type="radio" name="extstart" value="after" ${ext.start !== 'purchase' ? 'checked' : ''}>After the maker's warranty ends</label>
+          <label><input type="radio" name="extstart" value="purchase" ${ext.start === 'purchase' ? 'checked' : ''}>From the purchase date</label></div></div>
+        <div class="f full"><span class="label">The plan also covers</span><div class="checks">
+          <label><input type="checkbox" id="f_acc" ${ext.accidental ? 'checked' : ''}>Accidental or screen damage</label>
+          <label><input type="checkbox" id="f_liq" ${ext.liquid ? 'checked' : ''}>Liquid damage</label></div></div>
+        <div class="f full"><label for="f_terms">Warranty terms (paste from the card or website)</label><textarea id="f_terms" placeholder="Covers manufacturing defects for 12 months. Physical and liquid damage not covered…">${esc(it.terms)}</textarea>
+          <span class="small muted">Saved terms let the damage check quote the exact clause.</span></div>
+      </div></fieldset>
+
+      <fieldset><legend>Remind me</legend>
+        <div class="checks">${[30, 10, 7, 1].map(n => `<label><input type="checkbox" name="remind" value="${n}" ${rd.includes(n) ? 'checked' : ''}>${n} day${n > 1 ? 's' : ''} before</label>`).join('')}</div>
+      </fieldset>
+      <p id="formErr" class="small" style="color:var(--bad)" role="alert"></p>
+      <div class="row"><button type="submit" class="primary">${state.editingId ? 'Save changes' : 'Save item'}</button><button type="button" data-act="cancelForm">Cancel</button></div>
+    </form>
+  </div>`;
+}
+let pendingBill = null;
+function wireForm() {
+  pendingBill = null;
+  const form = $('#itemForm');
+  form.querySelectorAll('input[name="channel"]').forEach(r => r.addEventListener('change', () => {
+    const online = form.querySelector('input[name="channel"]:checked').value === 'online';
+    $('#platformBox').hidden = !online; $('#storeLabel').textContent = online ? 'Seller name' : 'Shop name';
+  }));
+  const fileIn = $('#f_bill');
+  fileIn.addEventListener('change', () => {
+    const f = fileIn.files[0]; if (!f) return; pendingBill = f;
+    $('#billPreview').innerHTML = f.type.startsWith('image/') ? `<img class="bill" src="${URL.createObjectURL(f)}" alt="Bill photo you picked">` : `<span class="small">${esc(f.name)}</span>`;
+    const rb = $('#readBill'); if (rb) rb.hidden = !f.type.startsWith('image/');
+    $('#billMsg').textContent = state.caps.assets ? 'The photo is saved with the item.' : 'Photo storage needs the Claude app, so only the details are saved here.';
+  });
+  const rb = $('#readBill');
+  if (rb) rb.addEventListener('click', async () => {
+    if (!pendingBill) return;
+    $('#billMsg').innerHTML = '<span class="spin" aria-hidden="true"></span> Reading the bill…';
+    try { const data = await state.caps.sample.json(extractPrompt('The bill photo is attached.'), { images: [pendingBill], modelTier: 'default' }); applyExtract(data); $('#billMsg').textContent = 'Filled from the photo. Please check the fields.'; }
+    catch (e) { $('#billMsg').textContent = e && e.code === 'not_granted' ? 'Reading photos was not allowed. Type the details instead.' : 'Could not read this photo. Try a clearer picture or type the details.'; }
+  });
+  const ib = $('#importBtn');
+  if (ib) ib.addEventListener('click', async () => {
+    const txt = $('#importText').value.trim(); const msg = $('#importMsg');
+    if (!txt) { msg.textContent = 'Paste the email or SMS first.'; return; }
+    if (state.caps.sample) {
+      msg.innerHTML = '<span class="spin" aria-hidden="true"></span> Reading…';
+      try { applyExtract(await state.caps.sample.json(extractPrompt('Order text:\n"""\n' + txt.slice(0, 12000) + '\n"""'), { modelTier: 'quick' })); msg.textContent = 'Filled. Please check the fields.'; return; }
+      catch (e) { /* fall through to the simple reader */ }
+    }
+    const n = applyExtract(regexExtract(txt));
+    msg.textContent = n ? `Picked out ${n} field${n > 1 ? 's' : ''}. Fill in the rest.` : 'Could not find details in this text. Type them below.';
+  });
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const v = id => $('#' + id).value.trim();
+    if (!v('f_product') || !v('f_date')) { $('#formErr').textContent = 'Add the product name and the purchase date to save.'; return; }
+    if (v('f_pin') && !/^\d{6}$/.test(v('f_pin'))) { $('#formErr').textContent = 'A PIN code has 6 digits.'; return; }
+    const old = state.items.find(x => x.id === state.editingId) || {};
+    const it = { ...old,
+      id: old.id || uid(), createdAt: old.createdAt || Date.now(),
+      product: v('f_product'), brand: v('f_brand'), category: v('f_category'), model: v('f_model'), serial: v('f_serial'), owner: v('f_owner'),
+      purchaseDate: v('f_date'), price: v('f_price') ? +v('f_price') : null, invoiceNo: v('f_invoice'), payment: v('f_payment'),
+      channel: form.querySelector('input[name="channel"]:checked').value, platform: v('f_platform'), storeName: v('f_store'), storePhone: v('f_phone'),
+      storeAddress: v('f_address'), city: v('f_city'), pin: v('f_pin'),
+      warrantyMonths: +v('f_months') || 0, amcDate: v('f_amc'),
+      ext: (v('f_extp') || +v('f_extm')) ? { provider: v('f_extp'), months: +v('f_extm') || 0, start: form.querySelector('input[name="extstart"]:checked').value, accidental: $('#f_acc').checked, liquid: $('#f_liq').checked } : null,
+      terms: v('f_terms'), remindDays: [...form.querySelectorAll('input[name="remind"]:checked')].map(x => +x.value),
+    };
+    if (it.channel !== 'online') it.platform = '';
+    const btn = form.querySelector('button[type="submit"]'); btn.disabled = true;
+    if (pendingBill && state.caps.assets) {
+      try { const r = await state.caps.assets.upload(pendingBill); it.billAssetId = r.id; it.billUrl = r.url; }
+      catch { toast('The bill photo could not be saved. The details are saved.'); }
+    }
+    await saveItem(it);
+    state.editingId = null; toast(old.id ? 'Changes saved' : 'Item saved'); go('item', it.id);
+  });
+}
+function extractPrompt(source) {
+  return `You read Indian purchase bills, GST invoices and order emails/SMS (Amazon.in, Flipkart, Croma, Reliance Digital, Vijay Sales, local shops). Extract the purchase details.
+Return ONLY a JSON object with these keys (null when unknown):
+product (short product name), brand, model, category (one of: ${CATEGORIES.join(', ')}), purchaseDate (YYYY-MM-DD; Indian dates are usually DD/MM/YYYY; prefer invoice or delivery date), price (number in rupees, final amount paid for this product), invoiceNo (GST invoice number or order ID), channel ("online" or "store"), platform (one of: ${PLATFORMS.join(', ')}, or null), storeName (shop or seller name), storeAddress, city, pin (6-digit PIN code of the shop), storePhone, warrantyMonths (number if the bill states it), serial (serial number or IMEI if printed), payment (one of: ${PAYMENTS.join(', ')}, or null).
+${source}`;
+}
+function regexExtract(t) {
+  const o = {};
+  const price = t.match(/(?:₹|Rs\.?|INR)\s?([\d,]+(?:\.\d{1,2})?)/i); if (price) o.price = Math.round(+price[1].replace(/,/g, ''));
+  const order = t.match(/(?:order\s*(?:id|no\.?|number|#)?|invoice\s*(?:no\.?|number)?)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/]{6,})/i); if (order) o.invoiceNo = order[1];
+  const M = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec';
+  let m = t.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/);
+  if (m) o.purchaseDate = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  else if ((m = t.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${M})[a-z]*,?\\s+(\\d{4})`, 'i')))) o.purchaseDate = `${m[3]}-${String(M.split('|').indexOf(m[2].slice(0, 3).toLowerCase()) + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  else if ((m = t.match(new RegExp(`\\b(${M})[a-z]*\\s+(\\d{1,2}),?\\s+(\\d{4})`, 'i')))) o.purchaseDate = `${m[3]}-${String(M.split('|').indexOf(m[1].slice(0, 3).toLowerCase()) + 1).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  const plat = PLATFORMS.find(p => new RegExp(p.replace(/\s+/g, '\\s*'), 'i').test(t)); if (plat) { o.platform = plat; o.channel = 'online'; }
+  const pin = t.match(/\b([1-9]\d{5})\b/); if (pin) o.pin = pin[1];
+  return o;
+}
+function applyExtract(d) {
+  if (!d || typeof d !== 'object') return 0;
+  let n = 0; const set = (id, val) => { if (val === null || val === undefined || val === '') return; const el = $('#' + id); if (!el) return; el.value = val; n++; };
+  set('f_product', d.product); set('f_brand', d.brand); set('f_model', d.model); set('f_serial', d.serial);
+  if (d.category && CATEGORIES.includes(d.category)) set('f_category', d.category);
+  if (d.purchaseDate && /^\d{4}-\d{2}-\d{2}$/.test(d.purchaseDate) && parseD(d.purchaseDate)) set('f_date', d.purchaseDate);
+  if (d.price !== null && d.price !== undefined && !isNaN(+d.price)) set('f_price', Math.round(+d.price));
+  set('f_invoice', d.invoiceNo); if (d.payment && PAYMENTS.includes(d.payment)) set('f_payment', d.payment);
+  if (d.channel === 'online' || d.platform) { const r = document.querySelector('input[name="channel"][value="online"]'); r.checked = true; r.dispatchEvent(new Event('change')); }
+  else if (d.channel === 'store') { const r = document.querySelector('input[name="channel"][value="store"]'); r.checked = true; r.dispatchEvent(new Event('change')); }
+  if (d.platform && PLATFORMS.includes(d.platform)) set('f_platform', d.platform);
+  set('f_store', d.storeName); set('f_address', d.storeAddress); set('f_city', d.city); if (d.pin && /^\d{6}$/.test(String(d.pin))) set('f_pin', d.pin); set('f_phone', d.storePhone);
+  if (d.warrantyMonths && !isNaN(+d.warrantyMonths)) set('f_months', +d.warrantyMonths);
+  return n;
+}
+
+/* ---------- item detail ---------- */
+function itemView() {
+  const it = state.items.find(x => x.id === state.currentId);
+  if (!it) return `<p class="muted">This item is no longer in your folder.</p><button type="button" data-view-go="list">Back to my items</button>`;
+  const c = coverage(it); const s = status(c); const amc = amcDue(it);
+  const online = it.channel === 'online';
+  const storeQ = [it.storeName, it.storeAddress, it.city, it.pin].filter(Boolean).join(', ');
+  const tl = c ? timeline(c) : '';
+  const reminders = (it.remindDays || []).slice().sort((a, b) => b - a);
+  const del = state.confirmDelete === it.id;
+  return `
+  <div class="backrow"><button type="button" class="ghost" data-view-go="list">← My items</button></div>
+  <div class="stack">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div style="min-width:0"><h2>${esc(it.product)}</h2><p class="muted">${esc([it.brand, it.model, it.category].filter(Boolean).join(' · '))}${it.owner && it.owner !== 'Me' ? ' · ' + esc(it.owner) + "'s" : ''}</p></div>
+      <div class="row"><span class="pill ${s.k}">${esc(s.label)}</span>${it.sample ? '<span class="pill sample">Sample</span>' : ''}</div>
+    </div>
+
+    <section class="card" aria-labelledby="covH">
+      <h3 id="covH">Coverage</h3>
+      ${c ? `<p>${c.daysLeft >= 0 ? `Covered for <b class="mono">${c.daysLeft}</b> more day${c.daysLeft === 1 ? '' : 's'}, until <b>${fmtD(c.end)}</b>.` : `Coverage ended on <b>${fmtD(c.end)}</b>, ${-c.daysLeft} days ago.`}</p>${tl}` : '<p class="muted">Add a purchase date to see coverage.</p>'}
+      ${amc ? `<p class="small">${amc.days >= 0 ? `Next AMC / service due on <b>${fmtD(amc.d)}</b> (${amc.days} days).` : `AMC / service was due on <b>${fmtD(amc.d)}</b>.`}</p>` : ''}
+    </section>
+
+    <div class="grid2">
+      <section class="card" aria-labelledby="buyH">
+        <h3 id="buyH">Purchase and store</h3>
+        <dl class="kv">
+          <dt>Bought on</dt><dd class="mono">${fmtD(c && c.p)}</dd>
+          <dt>Price</dt><dd class="mono">${inr(it.price)}</dd>
+          ${it.payment ? `<dt>Paid by</dt><dd>${esc(it.payment)}</dd>` : ''}
+          ${it.invoiceNo ? `<dt>Invoice / order</dt><dd class="mono sel">${esc(it.invoiceNo)}</dd>` : ''}
+          ${it.serial ? `<dt>Serial / IMEI</dt><dd class="mono sel">${esc(it.serial)}</dd>` : ''}
+          <dt>${online ? 'Bought on' : 'Shop'}</dt><dd>${esc(online ? [it.platform || 'Online', it.storeName && 'seller ' + it.storeName].filter(Boolean).join(', ') : it.storeName || '—')}</dd>
+          ${!online && (it.storeAddress || it.city || it.pin) ? `<dt>Location</dt><dd>${esc([it.storeAddress, it.city].filter(Boolean).join(', '))}${it.pin ? ' <span class="mono">' + esc(it.pin) + '</span>' : ''}</dd>` : ''}
+          ${online && (it.city || it.pin) ? `<dt>Delivered to</dt><dd>${esc(it.city)}${it.pin ? ' <span class="mono">' + esc(it.pin) + '</span>' : ''}</dd>` : ''}
+          ${it.storePhone ? `<dt>Shop phone</dt><dd class="mono sel">${esc(it.storePhone)}</dd>` : ''}
+        </dl>
+        <div class="row">
+          ${!online && storeQ ? `<a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${enc(storeQ)}">Open shop in Google Maps</a>` : ''}
+          ${online && ORDER_LINKS[it.platform] ? `<a class="btn" target="_blank" rel="noopener" href="${ORDER_LINKS[it.platform]}">Open ${esc(it.platform)} orders</a>` : ''}
+        </div>
+        ${it.billUrl ? `<img class="bill" src="${esc(it.billUrl)}" alt="Bill for ${esc(it.product)}">` : `<p class="small muted">No bill photo saved yet.</p>`}
+      </section>
+
+      <section class="card" aria-labelledby="remH">
+        <h3 id="remH">Reminders</h3>
+        ${c && reminders.length ? `<ul class="plain small">${reminders.map(n => { const d = addDays(c.end, -n); return `<li><span class="mono">${fmtD(d)}</span> · ${n} day${n > 1 ? 's' : ''} before it ends${d < today() ? ' <span class="muted">(passed)</span>' : ''}</li>`; }).join('')}</ul>` : '<p class="small muted">No reminders set.</p>'}
+        <div class="row">
+          ${state.caps.downloads && c ? `<button type="button" data-act="ics">Add to my phone calendar</button>` : ''}
+          ${c ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${enc(`Reminder: the warranty for ${it.product}${it.brand ? ' (' + it.brand + ')' : ''} ends on ${fmtD(c.end)}. Bought from ${online ? it.platform || 'online' : it.storeName || 'a shop'}${it.invoiceNo ? ', invoice ' + it.invoiceNo : ''}.`)}">Share on WhatsApp</a>` : ''}
+        </div>
+        ${state.caps.downloads ? '<p class="small muted">The calendar file works with Google Calendar and iPhone Calendar, with an alert on each reminder day.</p>' : ''}
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="brokeH" id="broke">
+      <h3 id="brokeH">Something broke? Check if it's covered</h3>
+      <div class="seg" role="radiogroup" aria-label="What happened">${PROBLEMS.map(([k, l]) => `<label><input type="radio" name="problem" value="${k}" ${state.check && state.check.problem === k ? 'checked' : ''}>${esc(l)}</label>`).join('')}</div>
+      <div class="f"><label for="probDesc">Describe it (optional)</label><input id="probDesc" value="${esc(state.check && state.check.desc)}" placeholder="Screen flickers and goes black after 5 minutes"></div>
+      <div class="row"><button type="button" class="primary" data-act="check">Check coverage</button></div>
+      <div id="checkOut">${state.check && state.check.problem ? checkResult(it, c) : ''}</div>
+    </section>
+
+    <section class="card" aria-labelledby="claimH">
+      <h3 id="claimH">Repair or claim tracker</h3>
+      <div class="fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 14px">
+        <div class="f"><label for="c_status">Status</label><select id="c_status"><option value="">No claim</option>${opt(['Complaint registered', 'Technician visit booked', 'Pickup done', 'Under repair', 'Waiting for parts', 'Rejected', 'Closed'], it.claim && it.claim.status)}</select></div>
+        <div class="f"><label for="c_ticket">Complaint / ticket no.</label><input id="c_ticket" class="mono" value="${esc(it.claim && it.claim.ticket)}"></div>
+        <div class="f"><label for="c_centre">Service centre</label><input id="c_centre" value="${esc(it.claim && it.claim.centre)}"></div>
+      </div>
+      <div class="f"><label for="c_notes">Notes</label><input id="c_notes" value="${esc(it.claim && it.claim.notes)}" placeholder="Technician said part will arrive in 5 days"></div>
+      <div class="row"><button type="button" data-act="saveClaim">Save claim</button>${it.claim && it.claim.updated ? `<span class="small muted">Updated ${fmtD(new Date(it.claim.updated))}</span>` : ''}</div>
+    </section>
+
+    <div class="row" style="justify-content:space-between">
+      <button type="button" data-act="edit">Edit item</button>
+      ${del ? `<div class="row"><span class="small">Delete ${esc(it.product)} for good?</span><button type="button" class="danger" data-act="delYes">Delete</button><button type="button" data-act="delNo">Keep</button></div>` : `<button type="button" class="ghost danger" data-act="del">Delete item</button>`}
+    </div>
+  </div>`;
+}
+function timeline(c) {
+  const start = c.p.getTime(); const end = Math.max(c.end.getTime(), today().getTime()); const span = Math.max(1, end - start);
+  const pct = d => ((d.getTime() - start) / span * 100);
+  const mk = `<div class="seg1 maker" style="left:0;width:${Math.max(2, pct(addDays(c.makerEnd, 1)))}%">Maker</div>`;
+  const pl = c.planEnd ? `<div class="seg1 plan" style="left:${pct(c.planStart)}%;width:${Math.max(2, pct(addDays(c.planEnd, 1)) - pct(c.planStart))}%">Plan</div>` : '';
+  const tp = Math.min(100, Math.max(0, pct(today())));
+  return `<div class="timeline">
+    <div class="track" aria-hidden="true">${mk}<span class="today" style="left:${tp}%"></span></div>${c.planEnd ? `<div class="track" aria-hidden="true">${pl}<span class="today" style="left:${tp}%"></span></div>` : ''}
+    <p class="small muted">Maker's warranty: ${fmtD(c.p)} to ${fmtD(c.makerEnd)}${c.planEnd ? ` · Plan: ${fmtD(c.planStart)} to ${fmtD(c.planEnd)}` : ''} · The dark line is today.</p>
+  </div>`;
+}
+function ruleVerdict(it, c, problem) {
+  const ext = it.ext || {};
+  if (!c) return { k: 'warn', title: 'Add the purchase date first', why: 'Without a purchase date the app cannot tell whether the warranty is still running.' };
+  if (problem === 'theft') return { k: 'bad', title: 'Not covered by a warranty', why: 'Warranties and most extended plans do not cover loss or theft. Check whether you have a separate gadget or home insurance policy, and file a police complaint (many states accept e-FIR for lost phones). For a lost phone, block it on the government CEIR portal (ceir.gov.in).' };
+  if (c.daysLeft < 0) return { k: 'bad', title: `Not covered: coverage ended on ${fmtD(c.end)}`, why: 'You will likely pay for this repair. Ask the authorised service centre for a quote first, and compare it with a trusted local repair shop.' };
+  if (problem === 'defect') {
+    if (c.inMaker) return { k: 'ok', title: "Likely covered by the maker's warranty", why: `Faults that appear on their own during the warranty period are what a maker's warranty is for. Warranty runs till ${fmtD(c.makerEnd)}.` };
+    if (c.inPlan) return { k: 'ok', title: `Likely covered by your plan${ext.provider ? ' (' + ext.provider + ')' : ''}`, why: `The maker's warranty has ended, but your plan runs till ${fmtD(c.planEnd)}. Claim through the plan provider, not the brand.` };
+  }
+  if (problem === 'drop' || problem === 'liquid') {
+    const flag = problem === 'drop' ? ext.accidental : ext.liquid;
+    if (flag && c.inPlan) return { k: 'ok', title: `Likely covered by your plan${ext.provider ? ' (' + ext.provider + ')' : ''}`, why: `Your plan includes ${problem === 'drop' ? 'accidental damage' : 'liquid damage'} and runs till ${fmtD(c.planEnd)}. Plans often charge a small processing fee per claim.` };
+    return { k: 'bad', title: 'Likely not covered', why: `Standard warranties in India exclude ${problem === 'drop' ? 'physical damage such as drops and cracks' : 'liquid damage'}. ${ext.provider ? 'Your saved plan does not list this cover, so check its terms.' : 'Only an accidental or liquid damage plan would cover this.'}` };
+  }
+  if (problem === 'surge') return { k: 'warn', title: 'Unclear: often excluded', why: 'Many brands exclude damage from voltage fluctuation or power surges, especially without a stabiliser. Some do cover it. The service centre will inspect and decide.' };
+  if (problem === 'wear') return { k: 'warn', title: 'Usually not covered, sometimes partly', why: 'Consumables such as filters, remotes, and bulbs are usually excluded. Batteries often have a shorter warranty (for phones, typically 6 months). Check the terms for this part.' };
+  return { k: 'warn', title: 'Unclear', why: 'Check the warranty terms or ask the service centre.' };
+}
+function checkResult(it, c) {
+  const ch = state.check; const v = ruleVerdict(it, c, ch.problem);
+  const ai = ch.ai;
+  const vk = ai ? ({ covered: 'ok', not_covered: 'bad', unclear: 'warn' }[ai.verdict] || 'warn') : v.k;
+  const vt = ai ? ({ covered: 'Likely covered', not_covered: 'Likely not covered', unclear: 'Unclear from the terms' }[ai.verdict] || 'Unclear') : v.title;
+  return `
+    <div class="verdict ${vk}" style="margin-top:12px">
+      <h3>${esc(vt)}</h3>
+      <p class="small">${esc(ai ? ai.reason : v.why)}</p>
+      ${ai && ai.clause ? `<span class="label">The clause it used</span><blockquote>${esc(ai.clause)}</blockquote>` : ''}
+      ${!ai && it.terms && state.caps.sample ? `<div class="row"><button type="button" data-act="aiCheck" ${ch.loading ? 'disabled' : ''}>${ch.loading ? '<span class="spin" aria-hidden="true"></span> Reading your terms…' : 'Check against my saved warranty terms'}</button></div>` : ''}
+      ${!it.terms ? '<p class="small muted">Paste the warranty terms into this item to get an answer that quotes the exact clause.</p>' : ''}
+      ${ch.err ? `<p class="small" style="color:var(--bad)">${esc(ch.err)}</p>` : ''}
+      <p class="small muted">This is guidance, not a guarantee. The brand or service centre makes the final decision after inspection.</p>
+    </div>
+    ${nextSteps(it, c, vk)}`;
+}
+function nextSteps(it, c, vk) {
+  const near = it.pin || it.city || '';
+  const brand = it.brand || it.product;
+  const maps = `https://www.google.com/maps/search/?api=1&query=${enc(`${brand} authorised service centre ${near}`.trim())}`;
+  const support = `https://www.google.com/search?q=${enc(`${brand} official customer care India register complaint`)}`;
+  const online = it.channel === 'online';
+  const withinReturn = c && Math.round((today() - c.p) / DAY) <= 10;
+  return `
+    <div class="stack" style="margin-top:14px">
+      <h3>What to do next</h3>
+      <ol class="steps small">
+        ${withinReturn && online ? `<li>You bought this ${Math.round((today() - c.p) / DAY)} days ago. ${esc(it.platform || 'The site')} may still accept a return or replacement, which is faster than a repair. ${ORDER_LINKS[it.platform] ? `<a target="_blank" rel="noopener" href="${ORDER_LINKS[it.platform]}">Open your orders</a>.` : ''}</li>` : ''}
+        ${vk !== 'bad' && it.ext && it.ext.provider && c && c.inPlan && !c.inMaker ? `<li>Raise the claim with <b>${esc(it.ext.provider)}</b>, since the maker's warranty has ended.</li>` : `<li>Register a complaint with ${esc(brand)}: <a target="_blank" rel="noopener" href="${support}">find the official customer care number or website</a>. Note the complaint number in the tracker below.</li>`}
+        <li><a target="_blank" rel="noopener" href="${maps}">Find the nearest ${esc(brand)} authorised service centre${near ? ' near ' + esc(near) : ''}</a>. Unauthorised repairs can void the warranty.</li>
+        <li>Carry: the bill${it.invoiceNo ? ' (<span class="mono">' + esc(it.invoiceNo) + '</span>)' : ''}, the warranty card, ${it.serial ? 'serial / IMEI <span class="mono">' + esc(it.serial) + '</span>, ' : 'the serial number or IMEI, '}${it.ext && it.ext.provider ? 'your plan certificate, ' : ''}and photos of the problem.</li>
+        ${!online && it.storeName ? `<li>${esc(it.storeName)} can often book the repair for you${it.storePhone ? ': call <span class="mono sel">' + esc(it.storePhone) + '</span>' : ''}.</li>` : ''}
+        <li>If a covered repair is refused or delayed, call the National Consumer Helpline on <b class="mono sel">1915</b> or file at <a target="_blank" rel="noopener" href="https://consumerhelpline.gov.in">consumerhelpline.gov.in</a>. A formal case can be filed online at <a target="_blank" rel="noopener" href="https://edaakhil.nic.in">e-Daakhil</a>.</li>
+      </ol>
+    </div>`;
+}
+function wireItem() {}
+$('#app').addEventListener('click', async e => {
+    if (state.view !== 'item') return;
+    const it = state.items.find(x => x.id === state.currentId); if (!it) return;
+    const app = $('#app');
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    const act = a.dataset.act;
+    if (act === 'check') {
+      const p = app.querySelector('input[name="problem"]:checked');
+      if (!p) { toast('Choose what happened first'); return; }
+      state.check = { problem: p.value, desc: $('#probDesc').value.trim() };
+      $('#checkOut').innerHTML = checkResult(it, coverage(it));
+    } else if (act === 'aiCheck') {
+      state.check.loading = true; $('#checkOut').innerHTML = checkResult(it, coverage(it));
+      const c = coverage(it);
+      const prompt = `You help people in India understand their product warranty. Decide whether this problem is likely covered, using ONLY the saved terms and the dates below. Be careful and conservative.
+Product: ${it.product} (${it.brand || ''} ${it.model || ''}), category ${it.category || ''}.
+Purchased: ${fmtD(c && c.p)}. Maker's warranty till: ${fmtD(c && c.makerEnd)}. ${it.ext && it.ext.provider ? `Extra plan: ${it.ext.provider}, ${fmtD(c && c.planStart)} to ${fmtD(c && c.planEnd)}, accidental damage: ${it.ext.accidental ? 'yes' : 'no'}, liquid damage: ${it.ext.liquid ? 'yes' : 'no'}.` : 'No extra plan.'}
+Today: ${fmtD(today())}.
+What happened: ${PROBLEMS.find(x => x[0] === state.check.problem)[1]}. ${state.check.desc ? 'Details: ' + state.check.desc : ''}
+Saved warranty terms:
+"""
+${it.terms.slice(0, 8000)}
+"""
+Return ONLY JSON: {"verdict":"covered"|"not_covered"|"unclear","clause":"exact sentence copied word for word from the terms that decides it, or null","reason":"one or two plain sentences for the owner"}`;
+      try { const r = await state.caps.sample.json(prompt, { modelTier: 'default' }); state.check.ai = r && r.verdict ? r : null; if (!state.check.ai) state.check.err = 'Could not read an answer. The quick check above still applies.'; }
+      catch (err) { state.check.err = err && err.code === 'not_granted' ? 'Asking Claude was not allowed, so the quick check above is shown.' : err && err.code === 'rate_limited' ? 'Too many checks just now. Try again in a minute.' : 'Could not check the terms right now. The quick check above still applies.'; }
+      state.check.loading = false; $('#checkOut').innerHTML = checkResult(it, coverage(it));
+    } else if (act === 'saveClaim') {
+      it.claim = { status: $('#c_status').value, ticket: $('#c_ticket').value.trim(), centre: $('#c_centre').value.trim(), notes: $('#c_notes').value.trim(), updated: Date.now() };
+      await saveItem(it); toast('Claim saved'); render();
+    } else if (act === 'edit') { state.editingId = it.id; go('form'); }
+    else if (act === 'del') { state.confirmDelete = it.id; render(); }
+    else if (act === 'delNo') { state.confirmDelete = null; render(); }
+    else if (act === 'delYes') { state.confirmDelete = null; await removeItem(it.id); toast('Item deleted'); go('list'); }
+    else if (act === 'ics') { saveFile(`${slug(it.product)}-warranty.ics`, ics([it]), 'text/calendar'); }
+});
+function slug(s) { return String(s || 'item').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item'; }
+function ics(items) {
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//WarrantyMitra//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  const d8 = d => iso(d).replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const escI = s => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const ev = (date, summary, desc, key) => { if (date < today()) return; L.push('BEGIN:VEVENT', `UID:${key}@warrantymitra`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${d8(date)}`, `DTEND;VALUE=DATE:${d8(addDays(date, 1))}`, `SUMMARY:${escI(summary)}`, `DESCRIPTION:${escI(desc)}`, 'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escI(summary)}`, 'TRIGGER:PT9H', 'END:VALARM', 'END:VEVENT'); };
+  items.forEach(it => {
+    const c = coverage(it); if (!c) return;
+    const where = it.channel === 'online' ? (it.platform || 'online') : [it.storeName, it.city].filter(Boolean).join(', ');
+    const desc = `Covered till ${fmtD(c.end)}. Bought ${fmtD(c.p)} from ${where || '—'}.${it.invoiceNo ? ' Invoice ' + it.invoiceNo + '.' : ''}${it.serial ? ' Serial ' + it.serial + '.' : ''}`;
+    (it.remindDays && it.remindDays.length ? it.remindDays : [10]).forEach(n => ev(addDays(c.end, -n), `${it.product}: warranty ends in ${n} day${n > 1 ? 's' : ''}`, desc, `${it.id}-${n}`));
+    const amc = amcDue(it); if (amc) ev(amc.d, `${it.product}: AMC / service due`, desc, `${it.id}-amc`);
+  });
+  L.push('END:VCALENDAR'); return L.join('\r\n');
+}
+async function saveFile(filename, text, type) {
+  if (!state.caps.downloads) { toast('Saving files needs the Claude app'); return; }
+  try { await state.caps.downloads.save({ filename, data: new Blob([text], { type }) }); toast('File ready'); }
+  catch (e) { if (!e || e.code !== 'declined') toast('Could not save the file'); }
+}
+
+/* ---------- compare ---------- */
+const COLS = ['WarrantyMitra', 'CoverKeep', 'Fabric', 'HoldMyBill', 'Warly', 'Warrantly, WarrantyVault, Warnty', 'Google Drive / Keep'];
+const ROWS = [
+  ['Bill scan or email fills in details', ['y', 'Claude reads a bill photo or a pasted order email/SMS'], ['y', 'photo or barcode'], ['y', 'forward emails'], ['p', 'stores bills'], ['q'], ['y', 'receipt scan'], ['n']],
+  ['Reminder timing you choose', ['y', '30, 10, 7, 1 days, any mix'], ['p', 'fixed 30, 7, 1'], ['p', 'flags near expiry'], ['y'], ['y'], ['y'], ['n', 'manual calendar']],
+  ['"Is it still covered?" damage check', ['y', 'quick check plus a check against your saved terms'], ['y'], ['y'], ['q'], ['q'], ['n', 'mostly no'], ['n']],
+  ['Shows the exact clause it used', ['y'], ['q'], ['y', 'cites source'], ['q'], ['q'], ['n'], ['n']],
+  ['Store name and shop location saved', ['y', 'shop, address, city, PIN, phone, Maps link'], ['q'], ['q'], ['q'], ['q'], ['q'], ['n']],
+  ['Indian stores and order apps', ['p', 'Amazon, Flipkart, Croma, Reliance Digital and more; paste now, inbox sync later'], ['n', 'US-focused'], ['n', 'US-focused'], ['p', 'available in India'], ['p', 'listed in India'], ['n', 'US-focused'], ['n']],
+  ['₹ price, GST invoice no., UPI / EMI', ['y'], ['n'], ['n'], ['q'], ['q'], ['n'], ['n']],
+  ['Extended warranty and protection plans', ['y', 'maker + plan timeline, accidental and liquid cover'], ['p', 'credit card extensions'], ['q'], ['q'], ['q'], ['q'], ['n']],
+  ['Next steps after "covered"', ['y', 'service centre near your PIN, documents to carry, store contact, return window'], ['q'], ['p', 'how to claim'], ['p', 'manage claims'], ['q'], ['n'], ['n']],
+  ['Claim or repair tracker', ['y'], ['q'], ['p', 'claim history'], ['y'], ['q'], ['n'], ['n']],
+  ['Indian escalation (NCH 1915, e-Daakhil, CEIR)', ['y'], ['n'], ['n'], ['q'], ['q'], ['n'], ['n']],
+  ['AMC renewals and non-electronics', ['y', 'purifiers, furniture, mattresses, vehicles'], ['q'], ['q'], ['q'], ['q'], ['q'], ['n']],
+  ['Family members', ['p', "tag whose item it is; shared household list later"], ['q'], ['y', 'share with partner'], ['y', 'team plans'], ['q'], ['q'], ['p', 'shared folders']],
+  ['Add reminders to phone calendar / WhatsApp', ['y'], ['q'], ['q'], ['q'], ['q'], ['q'], ['n']],
+  ['Price', ['t', 'Free prototype'], ['t', 'Free; Premium $4.99/mo'], ['t', 'Part of Fabric'], ['t', 'Free; paid from about $8.99'], ['t', 'Not checked'], ['t', 'Mostly free + upgrades'], ['t', 'Free']],
+];
+const MK = { y: ['✓', 'Yes'], p: ['◐', 'Partly'], n: ['✕', 'No'], q: ['?', 'Not listed'] };
+function compareView() {
+  const cell = (v, i) => { const [k, note] = v; const cls = i === 0 ? ' class="us"' : '';
+    if (k === 't') return `<td${cls}>${esc(note)}</td>`;
+    return `<td${cls}><span class="mk ${k}" aria-label="${MK[k][1]}">${MK[k][0]}</span> <span class="sr">${MK[k][1]}</span>${note ? `<span class="note">${esc(note)}</span>` : ''}</td>`; };
+  return `
+  <div class="stack">
+    <div><h2>How WarrantyMitra compares</h2>
+    <p class="muted" style="max-width:65ch">Most warranty apps stop at storing the bill and sending a reminder. WarrantyMitra is built around the moment something breaks in an Indian home: is it still covered, which clause says so, where is the nearest service centre, and who to call if the claim is refused.</p></div>
+    <p class="small muted"><span class="mk y">✓</span> Yes · <span class="mk p">◐</span> Partly · <span class="mk n">✕</span> No · <span class="mk q">?</span> Not mentioned in the store listing or site we checked</p>
+    <div class="tablewrap"><table class="cmp">
+      <thead><tr><th scope="col">Feature</th>${COLS.map((c, i) => `<th scope="col"${i === 0 ? ' class="us"' : ''}>${esc(c)}</th>`).join('')}</tr></thead>
+      <tbody>${ROWS.map(r => `<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map(cell).join('')}</tr>`).join('')}</tbody>
+    </table></div>
+    <div class="grid2">
+      <section class="card"><h3>Gaps this prototype fills</h3><ul class="plain small">
+        <li>Saves the shop name, address, city, PIN and phone, or the website and seller, for every purchase.</li>
+        <li>Damage check for drops, liquid, voltage fluctuation, consumables and theft, with Indian norms and your plan's extra cover.</li>
+        <li>Two coverage clocks: the maker's warranty and an extended or protection plan, shown on one timeline.</li>
+        <li>India-specific next steps: return window on Amazon or Flipkart, service centre near your PIN, National Consumer Helpline 1915, e-Daakhil, CEIR for lost phones.</li>
+        <li>₹ amounts in lakh format, GST invoice numbers, UPI and EMI, AMC renewals for purifiers and ACs.</li>
+      </ul></section>
+      <section class="card"><h3>Not in this prototype yet</h3><ul class="plain small">
+        <li>Automatic Gmail or SMS inbox import (today you paste the email or SMS).</li>
+        <li>Push notifications from an installed app (today reminders go into your phone calendar).</li>
+        <li>Hindi, Telugu and other Indian languages.</li>
+        <li>A shared household list that several family members edit.</li>
+        <li>GPS capture of the shop's location (today you type the address and PIN).</li>
+        <li>A verified directory of brand service centres and helpline numbers.</li>
+      </ul></section>
+    </div>
+    <p class="small muted">Competitor details come from their App Store listings and websites, as summarised in the market analysis from 25 Oct 2026.</p>
+  </div>`;
+}
+
+/* ---------- shared wiring ---------- */
+function wireCommon() {
+  const app = $('#app');
+  app.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => { state.confirmDelete = null; go('item', b.dataset.open); }));
+  app.querySelectorAll('[data-view-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.viewGo)));
+  app.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { state.filter = b.dataset.filter; render(); }));
+  app.querySelectorAll('[data-act="add"]').forEach(b => b.addEventListener('click', () => { state.editingId = null; go('form'); }));
+  app.querySelectorAll('[data-act="cancelForm"]').forEach(b => b.addEventListener('click', () => { const id = state.editingId; state.editingId = null; id ? go('item', id) : go('list'); }));
+  app.querySelectorAll('[data-act="samples"]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; for (const it of sampleItems()) await saveItem(it); toast('4 sample items added'); render(); }));
+  app.querySelectorAll('[data-act="icsAll"]').forEach(b => b.addEventListener('click', () => saveFile('warrantymitra-reminders.ics', ics(state.items), 'text/calendar')));
+  app.querySelectorAll('[data-act="backup"]').forEach(b => b.addEventListener('click', () => saveFile(`warrantymitra-backup-${iso(today())}.json`, JSON.stringify(state.items, null, 2), 'application/json')));
+}
+
+boot();
+})();
+</script>
+<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}</style>
