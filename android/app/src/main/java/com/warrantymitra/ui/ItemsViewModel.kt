@@ -6,6 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.warrantymitra.data.AppDatabase
 import com.warrantymitra.data.Item
+import com.warrantymitra.data.readBillText
+import com.warrantymitra.domain.OrderTextParser
+import com.warrantymitra.domain.ParsedOrder
 import com.warrantymitra.data.sampleItems
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +55,10 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             out.absolutePath
         }.getOrNull()
     }
+
+    /** Reads the details printed on a saved bill photo. */
+    suspend fun readBill(path: String): ParsedOrder? =
+        readBillText(getApplication(), File(path))?.let { withContext(Dispatchers.Default) { OrderTextParser.parse(it) } }
 
     /** Writes every item as JSON to a file the person chose, for backup. */
     fun exportBackup(target: Uri, onDone: (Boolean) -> Unit) = viewModelScope.launch {

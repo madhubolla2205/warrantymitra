@@ -54,9 +54,18 @@ def dump():
             continue
         raw = adb("exec-out", "cat", "/sdcard/ui.xml", out=True)
         try:
-            return list(ET.fromstring(raw).iter("node"))
+            nodes = list(ET.fromstring(raw).iter("node"))
         except ET.ParseError:
             time.sleep(1)
+            continue
+        # A slow emulator sometimes shows "Pixel Launcher isn't responding" over the app; wait it out.
+        wait = next((n for n in nodes if label(n) == "Wait"), None)
+        if wait is not None and any("isn't responding" in label(n) for n in nodes):
+            print("dismissing a system 'isn't responding' dialog")
+            adb("shell", "input", "tap", *map(str, center(wait)))
+            time.sleep(1.5)
+            continue
+        return nodes
     return []
 
 
@@ -64,9 +73,15 @@ def label(n):
     return (n.get("text") or "") + (n.get("content-desc") or "")
 
 
-def find(text, contains=True, which=-1):
-    ns = [n for n in dump() if ((text in label(n)) if contains else (label(n) == text))]
-    return ns[which] if ns else None
+def find(text, contains=True, which=-1, tries=3):
+    # A dump taken mid-animation can come back as the previous screen, so look again before giving up.
+    for i in range(tries):
+        ns = [n for n in dump() if ((text in label(n)) if contains else (label(n) == text))]
+        if ns:
+            return ns[which]
+        if i < tries - 1:
+            time.sleep(1)
+    return None
 
 
 def center(n):
@@ -196,6 +211,11 @@ def open_add_form(S):
 
 # ---------------------------------------------------------------- setup
 adb("shell", "cmd", "uimode", "night", "no")
+# The emulator's launcher hangs under CI load and its "isn't responding" dialog covers the app, so turn it off;
+# the script opens the app directly and never needs the home screen.
+adb("shell", "settings", "put", "global", "hide_error_dialogs", "1")
+adb("shell", "pm", "disable-user", "--user", "0", "com.google.android.apps.nexuslauncher")
+adb("shell", "am", "force-stop", "com.google.android.apps.nexuslauncher")
 adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 adb("shell", "pm", "grant", PKG, "android.permission.ACCESS_FINE_LOCATION")
 adb("shell", "pm", "grant", PKG, "android.permission.ACCESS_COARSE_LOCATION")
@@ -360,6 +380,48 @@ if run("8"):
           note="" if find("Couldn't open the shared photo") is None else "app showed: couldn't open the shared photo")
     else:
         check(S, "Add form opens with the photo attached", False, note="could not register the test image with the gallery")
+
+# ---------------------------------------------------------------- S9: bill photos read on the phone
+BILL_PHOTOS = [
+    ("local-gst-bill.jpg", "Local shop GST bill, tilted, with stamp", {
+        "product": "Bajaj Rex 500W Mixer Grinder", "price": "3200", "invoice": "SVE/1087", "date": "02 Sep 2025", "PIN": "500016", "brand": "Bajaj"}),
+    ("croma-thermal-receipt.jpg", "Croma thermal receipt, faded and creased", {
+        "product": "SONY WH-1000XM5 BLK", "price": "29990", "invoice": "C412/2526/018834", "date": "05 Oct 2025", "PIN": "500081", "brand": "Sony"}),
+    ("reliance-digital-invoice.jpg", "Reliance Digital invoice, dim light", {
+        "product": "Samsung 253L 3 Star Frost Free Refrigerator", "price": "24490", "invoice": "4471000129", "date": "14 Sep 2025",
+        "PIN": "500072", "brand": "Samsung"}),
+    ("vijay-sales-slip.jpg", "Vijay Sales slip, crumpled, low contrast", {
+        "product": "HAIER 1.5T 3S INV AC HSU18C", "price": "36490", "invoice": "VS-AMP-25-77812", "date": "20 Aug 2025", "PIN": "500016",
+        "brand": "Haier"}),
+]
+if run("9"):
+    S = "9. Bill photos read on the phone"
+    adb("shell", "run-as", PKG, "mkdir", "-p", "files/test-bills")
+    for fn, desc, want in BILL_PHOTOS:
+        home_list()
+        adb("push", f".github/scripts/bills/{fn}", f"/data/local/tmp/{fn}")
+        adb("shell", "run-as", PKG, "cp", f"/data/local/tmp/{fn}", f"files/test-bills/{fn}")
+        adb("logcat", "-c")
+        adb("shell", "am", "start", "-f", "0x10008000", "-n", f"{PKG}/.MainActivity", "-a", "com.warrantymitra.debug.READ_BILL",
+            "--es", "path", f"/data/user/0/{PKG}/files/test-bills/{fn}")
+        note = None
+        for _ in range(25):
+            time.sleep(1)
+            note = find("from the bill photo", tries=1) or find("Couldn't read details", tries=1)
+            if note is not None:
+                break
+        text = adb("logcat", "-d", "-s", "BillReader:D", "-v", "raw", out="text")
+        with open(f"{OUT}/ocr-{fn.rsplit('.', 1)[0]}.txt", "w") as f:
+            f.write(text)
+        check(S, f"{desc}: details read", note is not None and "from the bill photo" in label(note), shot("photo-" + fn.split("-")[0]),
+              note="" if note is None else label(note))
+        got, missed = [], []
+        for field, value in want.items():
+            (got if seek(value, max_scrolls=5) is not None else missed).append(field)
+        to_top()
+        swipe_up(700)
+        check(S, f"{desc}: {len(got)}/{len(want)} fields right", not missed, shot("photo-fields-" + fn.split("-")[0]),
+              note=("missed: " + ", ".join(missed)) if missed else "")
 
 # ---------------------------------------------------------------- report
 with open(f"{OUT}/results.md", "w") as f:

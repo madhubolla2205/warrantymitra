@@ -55,6 +55,9 @@ class MainActivity : ComponentActivity() {
             // Debug builds only: lets testers fire today's reminders now instead of waiting for 9 AM.
             BuildConfig.DEBUG && intent.action == ACTION_RUN_REMINDERS ->
                 WorkManager.getInstance(this).enqueue(OneTimeWorkRequestBuilder<ReminderWorker>().build())
+            // Debug builds only: opens a bill photo already in the app's files the way a shared one is, for the photo-reading tests.
+            BuildConfig.DEBUG && intent.action == ACTION_READ_BILL ->
+                intent.getStringExtra("path")?.let { incoming.value = Incoming.SharedImage(Uri.fromFile(java.io.File(it))) }
             itemId > 0 -> incoming.value = Incoming.OpenItem(itemId)
             intent.action == Intent.ACTION_SEND && intent.type == "text/plain" ->
                 intent.getStringExtra(Intent.EXTRA_TEXT)?.let { incoming.value = Incoming.SharedText(it) }
@@ -68,5 +71,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_RUN_REMINDERS = "com.warrantymitra.debug.RUN_REMINDERS"
+        const val ACTION_READ_BILL = "com.warrantymitra.debug.READ_BILL"
     }
 }
