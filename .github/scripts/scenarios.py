@@ -205,6 +205,11 @@ def open_add_form(S):
 
 # ---------------------------------------------------------------- setup
 adb("shell", "cmd", "uimode", "night", "no")
+# The emulator's launcher hangs under CI load and its "isn't responding" dialog covers the app, so turn it off;
+# the script opens the app directly and never needs the home screen.
+adb("shell", "settings", "put", "global", "hide_error_dialogs", "1")
+adb("shell", "pm", "disable-user", "--user", "0", "com.google.android.apps.nexuslauncher")
+adb("shell", "am", "force-stop", "com.google.android.apps.nexuslauncher")
 adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 adb("shell", "pm", "grant", PKG, "android.permission.ACCESS_FINE_LOCATION")
 adb("shell", "pm", "grant", PKG, "android.permission.ACCESS_COARSE_LOCATION")
