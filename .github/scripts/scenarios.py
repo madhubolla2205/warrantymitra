@@ -54,9 +54,18 @@ def dump():
             continue
         raw = adb("exec-out", "cat", "/sdcard/ui.xml", out=True)
         try:
-            return list(ET.fromstring(raw).iter("node"))
+            nodes = list(ET.fromstring(raw).iter("node"))
         except ET.ParseError:
             time.sleep(1)
+            continue
+        # A slow emulator sometimes shows "Pixel Launcher isn't responding" over the app; wait it out.
+        wait = next((n for n in nodes if label(n) == "Wait"), None)
+        if wait is not None and any("isn't responding" in label(n) for n in nodes):
+            print("dismissing a system 'isn't responding' dialog")
+            adb("shell", "input", "tap", *map(str, center(wait)))
+            time.sleep(1.5)
+            continue
+        return nodes
     return []
 
 
@@ -368,7 +377,7 @@ BILL_PHOTOS = [
     ("croma-thermal-receipt.jpg", "Croma thermal receipt, faded and creased", {
         "product": "SONY WH-1000XM5 BLK", "price": "29990", "invoice": "C412/2526/018834", "date": "05 Oct 2025", "PIN": "500081", "brand": "Sony"}),
     ("reliance-digital-invoice.jpg", "Reliance Digital invoice, dim light", {
-        "product": "Samsung 253L 3 Star Frost Free Refrigerator", "price": "24490", "invoice": "2510RD4471000129", "date": "14 Sep 2025",
+        "product": "Samsung 253L 3 Star Frost Free Refrigerator", "price": "24490", "invoice": "4471000129", "date": "14 Sep 2025",
         "PIN": "500072", "brand": "Samsung"}),
     ("vijay-sales-slip.jpg", "Vijay Sales slip, crumpled, low contrast", {
         "product": "HAIER 1.5T 3S INV AC HSU18C", "price": "36490", "invoice": "VS-AMP-25-77812", "date": "20 Aug 2025", "PIN": "500016",

@@ -58,7 +58,7 @@ object OrderTextParser {
 
     private val orderFormats = listOf(Regex("""\b\d{3}-\d{7}-\d{7}\b"""), Regex("""\bOD\d{12,}\b"""))
     private val orderLabelRe = Regex(
-        """\b(?:order[ \t]*(?:id|no\.?|number|#)?|inv[o0]ice[ \t]*(?:n[o0]\.?|number|#)?|inv\.?[ \t]*n[o0]\.?|bill[ \t]*n[o0]\.?)[ \t]*[:#.\-]?[ \t]*([A-Z0-9][A-Z0-9\-/]{2,})""",
+        """\b(?:order[ \t]*(?:id|no\.?|number|#)?|inv[o0]ice[ \t]*(?:n[o0]\.?|number|#)?|inv\.?[ \t]*n[o0]\.?|bill[ \t]*n[o0]\.?)[ \t]*[:#.\-]?[ \t]*([A-Z0-9][A-Z0-9/]*(?:[ \t]?-[ \t]?[A-Z0-9/]+)*)""",
         RegexOption.IGNORE_CASE,
     )
 
@@ -106,11 +106,19 @@ object OrderTextParser {
         )
     }
 
-    /** Bill photos often come back with O for 0 inside numbers ("5OOO16", "2O/O8/2025"). */
-    internal fun fixOcrDigits(text: String): String =
-        Regex("""(?<![A-Za-z])[0-9Oo][0-9Oo,./\-]*[0-9Oo](?![A-Za-z])""").replace(text) { m ->
+    /**
+     * Bill photos come back with O for 0 and l for 1 inside numbers ("5OOO16", "0l8834"), and with stray
+     * spaces inside dates and amounts ("20/08/2 025", "29990. 00").
+     */
+    internal fun fixOcrDigits(text: String): String {
+        var t = Regex("""(?<![A-Za-z])[0-9Oo][0-9Oo,./\-]*[0-9Oo](?![A-Za-z])""").replace(text) { m ->
             if (m.value.count(Char::isDigit) >= 2) m.value.replace('O', '0').replace('o', '0') else m.value
         }
+        t = Regex("""(?<=\d)[lI|](?=\d)""").replace(t, "1")
+        t = Regex("""(?<=\d)O(?=\d)""").replace(t, "0")
+        t = Regex("""\b(\d{1,2}[/.\-]\d{1,2}[/.\-]\d) (\d{3})\b""").replace(t, "$1$2")
+        return Regex("""(\d)\. (\d{2})\b""").replace(t, "$1.$2")
+    }
 
     private fun findPlatform(text: String): String? =
         PLATFORMS.firstOrNull { p -> Regex("""\b${p.replace(" ", "\\s*")}\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) }
@@ -118,7 +126,9 @@ object OrderTextParser {
 
     private fun findOrderNo(text: String): String? {
         orderFormats.forEach { re -> re.find(text)?.let { return it.value } }
-        return orderLabelRe.findAll(text).map { it.groupValues[1] }.firstOrNull { v -> v.any(Char::isDigit) && !looksLikeDate(v) }
+        // A photo can split "VS-AMP-25-77812" into "VS - AMP -25-77812".
+        return orderLabelRe.findAll(text).map { it.groupValues[1].replace(Regex("""[ \t]"""), "") }
+            .firstOrNull { v -> v.length >= 3 && v.any(Char::isDigit) && !looksLikeDate(v) }
     }
 
     private fun looksLikeDate(s: String) = numericDateRe.matches(s) || dayMonthRe.matches(s)

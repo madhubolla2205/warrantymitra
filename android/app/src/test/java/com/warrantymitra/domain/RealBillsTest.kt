@@ -20,6 +20,8 @@ class RealBillsTest {
 
     @Test fun billsWrittenAfterTuning() = check(RealBillsUnseen.all)
 
+    @Test fun billPhotosAsTheReaderSawThem() = check(PhotoBills.all)
+
     @Test fun ocrDigitSlipsAreRepaired() {
         assertEquals("Hyd 500016 on 20/08/2025 for 36,490.00", OrderTextParser.fixOcrDigits("Hyd 5OOO16 on 2O/O8/2025 for 36,49O.0O"))
         assertEquals("ORDER NO: OD", OrderTextParser.fixOcrDigits("ORDER NO: OD"))
