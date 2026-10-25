@@ -20,10 +20,10 @@ def nodes():
     return ET.fromstring(xml).iter("node")
 
 def tap(text, contains=False, tries=6):
+    # The last match wins: a product name can also appear in the summary tiles above its card.
     for _ in range(tries):
-        for n in nodes():
-            t = n.get("text") or n.get("content-desc") or ""
-            if (text in t) if contains else (t == text):
+        matches = [n for n in nodes() if ((text in (n.get("text") or n.get("content-desc") or "")) if contains else ((n.get("text") or n.get("content-desc") or "") == text))]
+        for n in matches[-1:]:
                 x1, y1, x2, y2 = map(int, re.findall(r"\d+", n.get("bounds")))
                 adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
                 time.sleep(1.2)
