@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -43,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -107,13 +109,22 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
             }
             ShareInbox.imageUri?.let { uri ->
                 ShareInbox.imageUri = null
-                vm.importBillPhoto(uri)?.let { f = f.copy(billPhotoPath = it); note = "Bill photo added. Fill in the details below." }
+                val path = vm.importBillPhoto(uri)
+                if (path != null) {
+                    f = f.copy(billPhotoPath = path)
+                    note = "Bill photo added. Fill in the details below."
+                } else {
+                    note = "Couldn't open the shared photo. Use \"Add bill photo\" below to pick it from your gallery."
+                }
             }
         }
     }
 
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri != null) scope.launch { vm.importBillPhoto(uri)?.let { f = f.copy(billPhotoPath = it) } }
+        if (uri != null) scope.launch {
+            val path = vm.importBillPhoto(uri)
+            if (path != null) f = f.copy(billPhotoPath = path) else note = "Couldn't save that photo. Try another one."
+        }
     }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants.values.any { it }) {
@@ -293,8 +304,12 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
 
 @Composable
 private fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onChange)
+    // The whole row toggles, so tapping the words works as well as tapping the box.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().toggleable(value = checked, onValueChange = onChange, role = Role.Checkbox),
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
         Text(label)
     }
 }
