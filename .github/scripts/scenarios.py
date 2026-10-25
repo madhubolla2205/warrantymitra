@@ -8,6 +8,11 @@ PKG = "com.warrantymitra"
 OUT = "results"
 os.makedirs(OUT, exist_ok=True)
 results = []
+_log = open(f"{OUT}/log.txt", "w")
+_print = print
+def print(*a):
+    _print(*a, flush=True)
+    _log.write(" ".join(str(x) for x in a) + "\n"); _log.flush()
 shot_no = [0]
 today = dt.date.today()
 
@@ -70,8 +75,8 @@ def swipe_down(dist=900):
 
 
 def to_top():
-    for _ in range(6):
-        swipe_down(1400)
+    for _ in range(3):
+        swipe_down(1500)
 
 
 def seek(text, contains=True, max_scrolls=8, which=-1):
@@ -94,6 +99,7 @@ def tap(text, contains=False, from_top=False, which=-1):
         print("could not find to tap:", text)
         return False
     x, y = center(n)
+    print(f"tap '{text}' at {x},{y} bounds={n.get('bounds')} clickable={n.get('clickable')} class={n.get('class')}")
     adb("shell", "input", "tap", str(x), str(y))
     time.sleep(1.3)
     return True
@@ -163,6 +169,16 @@ def damage(problem):
     time.sleep(1)
 
 
+def open_add_form(S):
+    tap("Add item", contains=False)
+    ok = find("Add an item", contains=False) is not None
+    if not ok:
+        n = find("Add item", contains=False)
+        print("Add item tap did not open the form; node now:", None if n is None else n.attrib)
+    check(S, "Add item button opens the form", ok, shot("add-form"))
+    return ok
+
+
 # ---------------------------------------------------------------- setup
 adb("shell", "cmd", "uimode", "night", "no")
 adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
@@ -171,15 +187,20 @@ adb("shell", "pm", "grant", PKG, "android.permission.ACCESS_COARSE_LOCATION")
 adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity")
 time.sleep(5)
 
+S = "0. Empty app"
+tap("Add your first item", contains=False)
+check(S, "'Add your first item' opens the form", find("Add an item", contains=False) is not None, shot("first-item-form"))
+back()
+
 # ---------------------------------------------------------------- S1: Amazon order SMS, warranty ends in 10 days
 S = "1. Amazon order SMS shared into the app"
 d1 = months_ago(today, 12) + dt.timedelta(days=11)  # 12-month warranty ends today + 10
 share_text(f"Your Amazon.in order of boAt Rockerz 450 Bluetooth Headphones has been delivered. Order #408-7712345-1234567 placed on {d1:%d/%m/%Y}. Total Rs. 1,499.")
 check(S, "Form opens with a note that fields were filled", find("Filled") is not None, shot("amazon-sms-filled"))
 check(S, "Product name read from the SMS", find("boAt Rockerz 450 Bluetooth Headphones") is not None)
-check(S, "Price ₹1499 read", find("1499", contains=False) is not None)
-check(S, "Order number read", find("408-7712345-1234567") is not None)
-check(S, "Purchase date read", find(f"{d1:%d %b %Y}") is not None, note=f"expected {d1:%d %b %Y}")
+check(S, "Order number read", seek("408-7712345-1234567") is not None)
+check(S, "Price ₹1499 read", seek("1499", contains=False) is not None, shot("amazon-price-date"))
+check(S, "Purchase date read", seek(f"{d1:%d %b %Y}") is not None, note=f"expected {d1:%d %b %Y}")
 type_into("Brand", "boAt")
 save_item()
 expect(S, "Saved item shows 'Ends in 10 days'", "Ends in 10 days", name="amazon-item-detail")
@@ -215,9 +236,10 @@ home_list()
 S = "3. Flipkart email with an extended plan"
 d2 = today - dt.timedelta(days=5)
 share_text(f"Delivered: Samsung 7 kg Front Load Washing Machine WW70 is delivered on {d2:%d %b %Y}. Order ID OD430112233445566 worth ₹32,490. Thank you for shopping on Flipkart")
-check(S, "Platform detected as Flipkart", find("Flipkart", contains=False) is not None, shot("flipkart-filled"))
-check(S, "Price ₹32490 read", find("32490", contains=False) is not None)
-check(S, "Written date read", find(f"{d2:%d %b %Y}") is not None, note=f"expected {d2:%d %b %Y}")
+shot("flipkart-filled")
+check(S, "Price ₹32490 read", seek("32490", contains=False) is not None)
+check(S, "Written date read", seek(f"{d2:%d %b %Y}") is not None, note=f"expected {d2:%d %b %Y}")
+check(S, "Platform detected as Flipkart", seek("Flipkart", contains=False) is not None, shot("flipkart-platform"))
 type_into("Brand", "Samsung")
 type_into("Extended warranty or protection plan", "Flipkart Complete Appliance Protection")
 type_into("Plan length (months)", "24")
@@ -250,7 +272,7 @@ home_list()
 S = "5. Bought in a shop, location saved by GPS"
 adb("emu", "geo", "fix", "78.3915", "17.4483")  # Madhapur, Hyderabad
 time.sleep(2)
-tap("Add item", contains=False)
+open_add_form(S)
 type_into("Product name *", "Voltas 1.5 ton split AC")
 type_into("Brand", "Voltas")
 type_into("Shop name", "Bajaj Electronics")
@@ -273,7 +295,7 @@ home_list()
 
 # ---------------------------------------------------------------- S6: form checks
 S = "6. Form checks"
-tap("Add item", contains=False)
+open_add_form(S)
 save_item()
 expect(S, "Empty product name is refused", "Add the product name to save.", from_top=False, name="empty-product")
 type_into("Product name *", "Test item")
@@ -285,11 +307,13 @@ home_list()
 # ---------------------------------------------------------------- S7: list overview
 S = "7. List and filters"
 to_top()
-check(S, "All items listed", all(find(t) is not None or seek(t) is not None for t in ["boAt Rockerz", "Samsung 7 kg", "Philips Mixer", "Voltas"]), shot("list"))
+missing = [t for t in ["boAt Rockerz", "Samsung 7 kg", "Philips Mixer", "Voltas"] if seek(t, max_scrolls=3) is None]
+check(S, "All items listed", not missing, shot("list"), note=("missing: " + ", ".join(missing)) if missing else "")
 to_top()
 tap("Ending soon", contains=False, which=0)
 check(S, "Ending soon filter shows the headphones only", find("boAt Rockerz") is not None and find("Philips Mixer") is None, shot("filter-ending-soon"))
 tap("Expired", contains=False, which=0)
+to_top()
 check(S, "Expired filter shows the mixer", find("Philips Mixer") is not None and find("boAt Rockerz") is None, shot("filter-expired"))
 tap("All", contains=False, which=0)
 
@@ -306,7 +330,8 @@ if m:
     adb("shell", "am", "start", "-f", "0x10008000", "-a", "android.intent.action.SEND", "-t", "image/png", "-n", f"{PKG}/.MainActivity",
         "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission")
     time.sleep(4)
-    check(S, "Add form opens with the photo attached", find("Photo saved") is not None, shot("bill-photo-shared"))
+    shot("bill-photo-shared")
+    check(S, "Add form opens with the photo attached", seek("Photo saved") is not None, shot("bill-photo-saved"))
 else:
     check(S, "Add form opens with the photo attached", False, note="could not register the test image with the gallery")
 
