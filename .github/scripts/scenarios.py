@@ -73,9 +73,15 @@ def label(n):
     return (n.get("text") or "") + (n.get("content-desc") or "")
 
 
-def find(text, contains=True, which=-1):
-    ns = [n for n in dump() if ((text in label(n)) if contains else (label(n) == text))]
-    return ns[which] if ns else None
+def find(text, contains=True, which=-1, tries=3):
+    # A dump taken mid-animation can come back as the previous screen, so look again before giving up.
+    for i in range(tries):
+        ns = [n for n in dump() if ((text in label(n)) if contains else (label(n) == text))]
+        if ns:
+            return ns[which]
+        if i < tries - 1:
+            time.sleep(1)
+    return None
 
 
 def center(n):
@@ -401,7 +407,7 @@ if run("9"):
         note = None
         for _ in range(25):
             time.sleep(1)
-            note = find("from the bill photo") or find("Couldn't read details")
+            note = find("from the bill photo", tries=1) or find("Couldn't read details", tries=1)
             if note is not None:
                 break
         text = adb("logcat", "-d", "-s", "BillReader:D", "-v", "raw", out="text")

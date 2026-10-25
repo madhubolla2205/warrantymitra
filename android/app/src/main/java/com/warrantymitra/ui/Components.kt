@@ -23,6 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.warrantymitra.domain.CoverageStatus
@@ -90,7 +92,9 @@ fun DateField(label: String, date: LocalDate?, onPick: (LocalDate) -> Unit, modi
             value = date?.let(::formatDate) ?: "", onValueChange = {}, readOnly = true,
             label = { Text(label) }, placeholder = { Text(placeholder) }, modifier = Modifier.fillMaxWidth(),
         )
-        Box(Modifier.matchParentSize().clickable {
+        // The tap target sits over the field, so it has to say what the field holds or screen readers announce nothing.
+        val shown = date?.let(::formatDate) ?: placeholder
+        Box(Modifier.matchParentSize().semantics { contentDescription = "$label: $shown" }.clickable(onClickLabel = "Change date") {
             val d = date ?: LocalDate.now()
             DatePickerDialog(context, { _, y, m, day -> onPick(LocalDate.of(y, m + 1, day)) }, d.year, d.monthValue - 1, d.dayOfMonth).show()
         })
