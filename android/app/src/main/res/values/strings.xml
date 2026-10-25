@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">WarrantyMitra</string>
+    <string name="reminder_channel">Warranty reminders</string>
+    <string name="reminder_channel_desc">Alerts before a warranty, plan or AMC runs out</string>
+</resources>
