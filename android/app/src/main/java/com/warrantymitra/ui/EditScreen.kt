@@ -79,17 +79,29 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
     var error by remember { mutableStateOf<String?>(null) }
     var locating by remember { mutableStateOf(false) }
 
-    fun applyParsed(p: ParsedOrder): Int {
+    // A bill photo picked after typing only fills the blanks, so it never overwrites what the person entered.
+    fun applyParsed(p: ParsedOrder, onlyBlanks: Boolean = false): Int {
+        fun <T> take(found: T?, current: T, blank: Boolean): T = if (found != null && (!onlyBlanks || blank)) found else current
+        val online = p.platform != null && f.platform.isBlank()
         f = f.copy(
-            product = p.product ?: f.product,
-            invoiceNo = p.invoiceNo ?: f.invoiceNo,
-            purchaseEpochDay = p.purchaseDate?.toEpochDay() ?: f.purchaseEpochDay,
-            boughtOnline = if (p.platform != null) true else f.boughtOnline,
-            platform = p.platform?.takeIf { it in PLATFORMS } ?: f.platform,
-            pin = p.pin ?: f.pin,
+            product = take(p.product, f.product, f.product.isBlank()),
+            brand = take(p.brand, f.brand, f.brand.isBlank()),
+            invoiceNo = take(p.invoiceNo, f.invoiceNo, f.invoiceNo.isBlank()),
+            purchaseEpochDay = take(p.purchaseDate?.toEpochDay(), f.purchaseEpochDay, f.purchaseEpochDay == LocalDate.now().toEpochDay()),
+            boughtOnline = if (online) true else f.boughtOnline,
+            platform = take(p.platform?.takeIf { it in PLATFORMS }, f.platform, f.platform.isBlank()),
+            pin = take(p.pin, f.pin, f.pin.isBlank()),
         )
-        p.price?.let { priceText = it.toString() }
+        priceText = take(p.price?.toString(), priceText, priceText.isBlank())
+        monthsText = take(p.warrantyMonths?.toString(), monthsText, monthsText == "12")
         return p.fieldCount
+    }
+
+    fun readPhoto(path: String, onlyBlanks: Boolean) = scope.launch {
+        note = "Bill photo added. Reading it\u2026"
+        val n = vm.readBill(path)?.let { applyParsed(it, onlyBlanks) } ?: 0
+        note = if (n > 0) "Read $n detail${if (n > 1) "s" else ""} from the bill photo. Check them and add the rest."
+        else "Bill photo added. Couldn't read details from it, so fill them in below."
     }
 
     LaunchedEffect(id) {
@@ -112,7 +124,7 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
                 val path = vm.importBillPhoto(uri)
                 if (path != null) {
                     f = f.copy(billPhotoPath = path)
-                    note = "Bill photo added. Fill in the details below."
+                    readPhoto(path, onlyBlanks = false)
                 } else {
                     note = "Couldn't open the shared photo. Use \"Add bill photo\" below to pick it from your gallery."
                 }
@@ -123,7 +135,10 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         if (uri != null) scope.launch {
             val path = vm.importBillPhoto(uri)
-            if (path != null) f = f.copy(billPhotoPath = path) else note = "Couldn't save that photo. Try another one."
+            if (path != null) {
+                f = f.copy(billPhotoPath = path)
+                readPhoto(path, onlyBlanks = true)
+            } else note = "Couldn't save that photo. Try another one."
         }
     }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
@@ -159,7 +174,7 @@ fun EditScreen(vm: ItemsViewModel, id: Long?, onDone: (Long) -> Unit, onCancel: 
 
             if (id == null) SectionCard("Fill it in for me") {
                 Text(
-                    "Paste an order SMS or email from Amazon, Flipkart, Croma or a shop. Or share it straight from Messages or Gmail to WarrantyMitra.",
+                    "Paste an order SMS or email from Amazon, Flipkart, Croma or a shop, or share it straight from Messages or Gmail. A bill photo is read too.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(pasted, { pasted = it }, label = { Text("Order SMS or email") }, minLines = 3, modifier = Modifier.fillMaxWidth())

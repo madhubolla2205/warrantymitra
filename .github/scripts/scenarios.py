@@ -361,6 +361,48 @@ if run("8"):
     else:
         check(S, "Add form opens with the photo attached", False, note="could not register the test image with the gallery")
 
+# ---------------------------------------------------------------- S9: bill photos read on the phone
+BILL_PHOTOS = [
+    ("local-gst-bill.jpg", "Local shop GST bill, tilted, with stamp", {
+        "product": "Bajaj Rex 500W Mixer Grinder", "price": "3200", "invoice": "SVE/1087", "date": "02 Sep 2025", "PIN": "500016", "brand": "Bajaj"}),
+    ("croma-thermal-receipt.jpg", "Croma thermal receipt, faded and creased", {
+        "product": "SONY WH-1000XM5 BLK", "price": "29990", "invoice": "C412/2526/018834", "date": "05 Oct 2025", "PIN": "500081", "brand": "Sony"}),
+    ("reliance-digital-invoice.jpg", "Reliance Digital invoice, dim light", {
+        "product": "Samsung 253L 3 Star Frost Free Refrigerator", "price": "24490", "invoice": "2510RD4471000129", "date": "14 Sep 2025",
+        "PIN": "500072", "brand": "Samsung"}),
+    ("vijay-sales-slip.jpg", "Vijay Sales slip, crumpled, low contrast", {
+        "product": "HAIER 1.5T 3S INV AC HSU18C", "price": "36490", "invoice": "VS-AMP-25-77812", "date": "20 Aug 2025", "PIN": "500016",
+        "brand": "Haier"}),
+]
+if run("9"):
+    S = "9. Bill photos read on the phone"
+    adb("shell", "run-as", PKG, "mkdir", "-p", "files/test-bills")
+    for fn, desc, want in BILL_PHOTOS:
+        home_list()
+        adb("push", f".github/scripts/bills/{fn}", f"/data/local/tmp/{fn}")
+        adb("shell", "run-as", PKG, "cp", f"/data/local/tmp/{fn}", f"files/test-bills/{fn}")
+        adb("logcat", "-c")
+        adb("shell", "am", "start", "-f", "0x10008000", "-n", f"{PKG}/.MainActivity", "-a", "com.warrantymitra.debug.READ_BILL",
+            "--es", "path", f"/data/user/0/{PKG}/files/test-bills/{fn}")
+        note = None
+        for _ in range(25):
+            time.sleep(1)
+            note = find("from the bill photo") or find("Couldn't read details")
+            if note is not None:
+                break
+        text = adb("logcat", "-d", "-s", "BillReader:D", "-v", "raw", out="text")
+        with open(f"{OUT}/ocr-{fn.rsplit('.', 1)[0]}.txt", "w") as f:
+            f.write(text)
+        check(S, f"{desc}: details read", note is not None and "from the bill photo" in label(note), shot("photo-" + fn.split("-")[0]),
+              note="" if note is None else label(note))
+        got, missed = [], []
+        for field, value in want.items():
+            (got if seek(value, max_scrolls=5) is not None else missed).append(field)
+        to_top()
+        swipe_up(700)
+        check(S, f"{desc}: {len(got)}/{len(want)} fields right", not missed, shot("photo-fields-" + fn.split("-")[0]),
+              note=("missed: " + ", ".join(missed)) if missed else "")
+
 # ---------------------------------------------------------------- report
 with open(f"{OUT}/results.md", "w") as f:
     passed = sum(1 for r in results if r[2])
