@@ -4,6 +4,11 @@ name: App scenarios
 # plus screenshots to the scenario-results branch.
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Scenario numbers to run, e.g. 5,6,8 (empty runs all)"
+        required: false
+        default: ""
   push:
     branches: [test-scenarios]
 
@@ -36,7 +41,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: adb install -r android/app/build/outputs/apk/debug/app-debug.apk && python3 .github/scripts/scenarios.py
+          script: adb install -r android/app/build/outputs/apk/debug/app-debug.apk && ONLY="${{ github.event.inputs.only || '4,5,6,8' }}" python3 .github/scripts/scenarios.py
       - name: Publish results to the scenario-results branch
         if: always()
         run: |

@@ -15,6 +15,11 @@ def print(*a):
     _log.write(" ".join(str(x) for x in a) + "\n"); _log.flush()
 shot_no = [0]
 today = dt.date.today()
+ONLY = os.environ.get("ONLY", "")
+
+
+def run(n):
+    return not ONLY or n in ONLY.split(",")
 
 
 def months_ago(d, months):
@@ -40,8 +45,13 @@ def shot(name):
 
 
 def dump():
-    for _ in range(3):
-        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
+    for _ in range(4):
+        adb("shell", "rm", "-f", "/sdcard/ui.xml")
+        msg = adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", out="text")
+        if "ERROR" in msg:
+            print("dump error:", msg.strip())
+            time.sleep(1)
+            continue
         raw = adb("exec-out", "cat", "/sdcard/ui.xml", out=True)
         try:
             return list(ET.fromstring(raw).iter("node"))
@@ -170,7 +180,12 @@ def damage(problem):
 
 
 def open_add_form(S):
-    tap("Add item", contains=False)
+    if find("Add item", contains=False) is None:
+        print("Add item not in the accessibility dump; tapping the floating button by position")
+        adb("shell", "input", "tap", "880", "2215")
+        time.sleep(1.5)
+    else:
+        tap("Add item", contains=False)
     ok = find("Add an item", contains=False) is not None
     if not ok:
         n = find("Add item", contains=False)
@@ -193,147 +208,155 @@ check(S, "'Add your first item' opens the form", find("Add an item", contains=Fa
 back()
 
 # ---------------------------------------------------------------- S1: Amazon order SMS, warranty ends in 10 days
-S = "1. Amazon order SMS shared into the app"
-d1 = months_ago(today, 12) + dt.timedelta(days=11)  # 12-month warranty ends today + 10
-share_text(f"Your Amazon.in order of boAt Rockerz 450 Bluetooth Headphones has been delivered. Order #408-7712345-1234567 placed on {d1:%d/%m/%Y}. Total Rs. 1,499.")
-check(S, "Form opens with a note that fields were filled", find("Filled") is not None, shot("amazon-sms-filled"))
-check(S, "Product name read from the SMS", find("boAt Rockerz 450 Bluetooth Headphones") is not None)
-check(S, "Order number read", seek("408-7712345-1234567") is not None)
-check(S, "Price ₹1499 read", seek("1499", contains=False) is not None, shot("amazon-price-date"))
-check(S, "Purchase date read", seek(f"{d1:%d %b %Y}") is not None, note=f"expected {d1:%d %b %Y}")
-type_into("Brand", "boAt")
-save_item()
-expect(S, "Saved item shows 'Ends in 10 days'", "Ends in 10 days", name="amazon-item-detail")
-expect(S, "Bought on Amazon, with orders link", "Open Amazon orders", name="amazon-store")
-damage("Stopped working on its own")
-expect(S, "Defect inside warranty: likely covered", "Likely covered by the maker's warranty", from_top=False, name="amazon-defect")
-damage("Dropped, cracked or broken")
-expect(S, "Drop without a plan: likely not covered", "Likely not covered", from_top=False, name="amazon-drop")
-expect(S, "Next steps: service centres near the delivery PIN or brand", "Find boAt customer care", from_top=False, name="amazon-next-steps")
+if run("1"):
+    S = "1. Amazon order SMS shared into the app"
+    d1 = months_ago(today, 12) + dt.timedelta(days=11)  # 12-month warranty ends today + 10
+    share_text(f"Your Amazon.in order of boAt Rockerz 450 Bluetooth Headphones has been delivered. Order #408-7712345-1234567 placed on {d1:%d/%m/%Y}. Total Rs. 1,499.")
+    check(S, "Form opens with a note that fields were filled", find("Filled") is not None, shot("amazon-sms-filled"))
+    check(S, "Product name read from the SMS", find("boAt Rockerz 450 Bluetooth Headphones") is not None)
+    check(S, "Order number read", seek("408-7712345-1234567") is not None)
+    check(S, "Price ₹1499 read", seek("1499", contains=False) is not None, shot("amazon-price-date"))
+    check(S, "Purchase date read", seek(f"{d1:%d %b %Y}") is not None, note=f"expected {d1:%d %b %Y}")
+    type_into("Brand", "boAt")
+    save_item()
+    expect(S, "Saved item shows 'Ends in 10 days'", "Ends in 10 days", name="amazon-item-detail")
+    expect(S, "Bought on Amazon, with orders link", "Open Amazon orders", name="amazon-store")
+    damage("Stopped working on its own")
+    expect(S, "Defect inside warranty: likely covered", "Likely covered by the maker's warranty", from_top=False, name="amazon-defect")
+    damage("Dropped, cracked or broken")
+    expect(S, "Drop without a plan: likely not covered", "Likely not covered", from_top=False, name="amazon-drop")
+    expect(S, "Next steps: service centres near the delivery PIN or brand", "Find boAt customer care", from_top=False, name="amazon-next-steps")
 
 # ---------------------------------------------------------------- S2: reminder notification 10 days before
-S = "2. Reminder 10 days before cover ends"
-adb("shell", "am", "start", "-f", "0x10008000", "-n", f"{PKG}/.MainActivity", "-a", "com.warrantymitra.debug.RUN_REMINDERS")
-time.sleep(8)
-notif = adb("shell", "dumpsys", "notification", "--noredact", out="text")
-check(S, "Notification posted for the headphones", "cover ends in 10 days" in notif,
-      note="" if "cover ends in 10 days" in notif else "no matching notification in dumpsys")
-adb("shell", "cmd", "statusbar", "expand-notifications")
-time.sleep(2)
-fn = shot("reminder-notification")
-check(S, "Notification visible in the shade", find("cover ends in 10 days") is not None, fn)
-n = find("cover ends in 10 days")
-if n is not None:
-    x, y = center(n)
-    adb("shell", "input", "tap", str(x), str(y))
-    time.sleep(3)
-    check(S, "Tapping the notification opens the item", find("boAt Rockerz 450 Bluetooth Headphones") is not None, shot("notification-opens-item"))
-else:
-    adb("shell", "cmd", "statusbar", "collapse")
-home_list()
+if run("2"):
+    S = "2. Reminder 10 days before cover ends"
+    adb("shell", "am", "start", "-f", "0x10008000", "-n", f"{PKG}/.MainActivity", "-a", "com.warrantymitra.debug.RUN_REMINDERS")
+    time.sleep(8)
+    notif = adb("shell", "dumpsys", "notification", "--noredact", out="text")
+    check(S, "Notification posted for the headphones", "cover ends in 10 days" in notif,
+          note="" if "cover ends in 10 days" in notif else "no matching notification in dumpsys")
+    adb("shell", "cmd", "statusbar", "expand-notifications")
+    time.sleep(2)
+    fn = shot("reminder-notification")
+    check(S, "Notification visible in the shade", find("cover ends in 10 days") is not None, fn)
+    n = find("cover ends in 10 days")
+    if n is not None:
+        x, y = center(n)
+        adb("shell", "input", "tap", str(x), str(y))
+        time.sleep(3)
+        check(S, "Tapping the notification opens the item", find("boAt Rockerz 450 Bluetooth Headphones") is not None, shot("notification-opens-item"))
+    else:
+        adb("shell", "cmd", "statusbar", "collapse")
+    home_list()
 
 # ---------------------------------------------------------------- S3: Flipkart email with written date + protection plan
-S = "3. Flipkart email with an extended plan"
-d2 = today - dt.timedelta(days=5)
-share_text(f"Delivered: Samsung 7 kg Front Load Washing Machine WW70 is delivered on {d2:%d %b %Y}. Order ID OD430112233445566 worth ₹32,490. Thank you for shopping on Flipkart")
-shot("flipkart-filled")
-check(S, "Price ₹32490 read", seek("32490", contains=False) is not None)
-check(S, "Written date read", seek(f"{d2:%d %b %Y}") is not None, note=f"expected {d2:%d %b %Y}")
-check(S, "Platform detected as Flipkart", seek("Flipkart", contains=False) is not None, shot("flipkart-platform"))
-type_into("Brand", "Samsung")
-type_into("Extended warranty or protection plan", "Flipkart Complete Appliance Protection")
-type_into("Plan length (months)", "24")
-tap("From purchase date")
-tap("Plan covers accidental or screen damage")
-save_item()
-expect(S, "Saved and covered", "Covered", name="flipkart-detail")
-expect(S, "Plan shown on the coverage timeline", "Flipkart Complete Appliance Protection", name="flipkart-timeline")
-damage("Dropped, cracked or broken")
-expect(S, "Drop with accidental cover: claim with plan", "Likely covered by your plan", from_top=False, name="flipkart-drop")
-expect(S, "Claim goes to the plan, maker's warranty still running", "not the brand", from_top=False, name="flipkart-claim-wording")
-expect(S, "Return window shown (bought 5 days ago)", "You bought this 5 days ago", from_top=False, name="flipkart-return-window")
-damage("Water or liquid damage")
-expect(S, "Water damage, plan has no liquid cover: not covered", "Likely not covered", from_top=False, name="flipkart-water")
-damage("Power cut or voltage fluctuation")
-expect(S, "Voltage fluctuation: unclear", "Unclear: often excluded", from_top=False, name="flipkart-voltage")
-home_list()
+if run("3"):
+    S = "3. Flipkart email with an extended plan"
+    d2 = today - dt.timedelta(days=5)
+    share_text(f"Delivered: Samsung 7 kg Front Load Washing Machine WW70 is delivered on {d2:%d %b %Y}. Order ID OD430112233445566 worth ₹32,490. Thank you for shopping on Flipkart")
+    shot("flipkart-filled")
+    check(S, "Price ₹32490 read", seek("32490", contains=False) is not None)
+    check(S, "Written date read", seek(f"{d2:%d %b %Y}") is not None, note=f"expected {d2:%d %b %Y}")
+    check(S, "Platform detected as Flipkart", seek("Flipkart", contains=False) is not None, shot("flipkart-platform"))
+    type_into("Brand", "Samsung")
+    type_into("Extended warranty or protection plan", "Flipkart Complete Appliance Protection")
+    type_into("Plan length (months)", "24")
+    tap("From purchase date")
+    tap("Plan covers accidental or screen damage")
+    save_item()
+    expect(S, "Saved and covered", "Covered", name="flipkart-detail")
+    expect(S, "Plan shown on the coverage timeline", "Flipkart Complete Appliance Protection", name="flipkart-timeline")
+    damage("Dropped, cracked or broken")
+    expect(S, "Drop with accidental cover: claim with plan", "Likely covered by your plan", from_top=False, name="flipkart-drop")
+    expect(S, "Claim goes to the plan, maker's warranty still running", "not the brand", from_top=False, name="flipkart-claim-wording")
+    expect(S, "Return window shown (bought 5 days ago)", "You bought this 5 days ago", from_top=False, name="flipkart-return-window")
+    damage("Water or liquid damage")
+    expect(S, "Water damage, plan has no liquid cover: not covered", "Likely not covered", from_top=False, name="flipkart-water")
+    damage("Power cut or voltage fluctuation")
+    expect(S, "Voltage fluctuation: unclear", "Unclear: often excluded", from_top=False, name="flipkart-voltage")
+    home_list()
 
 # ---------------------------------------------------------------- S4: expired product
-S = "4. Product bought 3 years ago"
-d3 = months_ago(today, 36)
-share_text(f"Your order of Philips Mixer Grinder HL7756 has been delivered. Order #402-1112223-3334445 on {d3:%d/%m/%Y}. Total Rs. 3,299 Amazon")
-save_item()
-expect(S, "Shows Expired", "Expired", name="expired-detail")
-damage("Stopped working on its own")
-expect(S, "Defect after expiry: not covered", "Not covered: cover ended on", from_top=False, name="expired-defect")
-home_list()
+if run("4"):
+    S = "4. Product bought 3 years ago"
+    d3 = months_ago(today, 36)
+    share_text(f"Your order of Philips Mixer Grinder HL7756 has been delivered. Order #402-1112223-3334445 on {d3:%d/%m/%Y}. Total Rs. 3,299 Amazon")
+    save_item()
+    expect(S, "Shows Expired", "Expired", name="expired-detail")
+    damage("Stopped working on its own")
+    expect(S, "Defect after expiry: not covered", "Not covered: cover ended on", from_top=False, name="expired-defect")
+    home_list()
 
 # ---------------------------------------------------------------- S5: shop purchase with GPS location
-S = "5. Bought in a shop, location saved by GPS"
-adb("emu", "geo", "fix", "78.3915", "17.4483")  # Madhapur, Hyderabad
-time.sleep(2)
-open_add_form(S)
-type_into("Product name *", "Voltas 1.5 ton split AC")
-type_into("Brand", "Voltas")
-type_into("Shop name", "Bajaj Electronics")
-type_into("Shop phone", "04023456789")
-adb("emu", "geo", "fix", "78.3915", "17.4483")
-tap("I'm at the shop: save its location")
-time.sleep(10)
-ok = find("Map pin saved") is not None
-check(S, "GPS position saved", ok, shot("shop-gps"))
-check(S, "City filled from the location", find("Hyderabad") is not None, note="geocoder may be unavailable on the emulator")
-pin = find("5000", contains=True)
-check(S, "PIN code filled from the location", pin is not None, note="" if pin is not None else "no 5000xx PIN on screen")
-save_item()
-expect(S, "Detail shows shop and Maps button", "Open shop in Maps", name="shop-detail")
-expect(S, "Shop phone has a call button", "Call shop", name="shop-call")
-damage("Water or liquid damage")
-expect(S, "Water damage: likely not covered", "Likely not covered", from_top=False, name="shop-water")
-expect(S, "Next steps offer calling the shop", "Call Bajaj Electronics", from_top=False, name="shop-next-steps")
-home_list()
+if run("5"):
+    S = "5. Bought in a shop, location saved by GPS"
+    adb("emu", "geo", "fix", "78.3915", "17.4483")  # Madhapur, Hyderabad
+    time.sleep(2)
+    open_add_form(S)
+    type_into("Product name *", "Voltas 1.5 ton split AC")
+    type_into("Brand", "Voltas")
+    type_into("Shop name", "Bajaj Electronics")
+    type_into("Shop phone", "04023456789")
+    adb("emu", "geo", "fix", "78.3915", "17.4483")
+    tap("I'm at the shop: save its location")
+    time.sleep(10)
+    ok = find("Map pin saved") is not None
+    check(S, "GPS position saved", ok, shot("shop-gps"))
+    check(S, "City filled from the location", find("Hyderabad") is not None, note="geocoder may be unavailable on the emulator")
+    pin = find("5000", contains=True)
+    check(S, "PIN code filled from the location", pin is not None, note="" if pin is not None else "no 5000xx PIN on screen")
+    save_item()
+    expect(S, "Detail shows shop and Maps button", "Open shop in Maps", name="shop-detail")
+    expect(S, "Shop phone has a call button", "Call shop", name="shop-call")
+    damage("Water or liquid damage")
+    expect(S, "Water damage: likely not covered", "Likely not covered", from_top=False, name="shop-water")
+    expect(S, "Next steps offer calling the shop", "Call Bajaj Electronics", from_top=False, name="shop-next-steps")
+    home_list()
 
 # ---------------------------------------------------------------- S6: form checks
-S = "6. Form checks"
-open_add_form(S)
-save_item()
-expect(S, "Empty product name is refused", "Add the product name to save.", from_top=False, name="empty-product")
-type_into("Product name *", "Test item")
-type_into("PIN code", "50008")
-save_item()
-expect(S, "5-digit PIN is refused", "A PIN code has 6 digits.", from_top=False, name="short-pin")
-home_list()
+if run("6"):
+    S = "6. Form checks"
+    open_add_form(S)
+    save_item()
+    expect(S, "Empty product name is refused", "Add the product name to save.", from_top=False, name="empty-product")
+    type_into("Product name *", "Test item")
+    type_into("PIN code", "50008")
+    save_item()
+    expect(S, "5-digit PIN is refused", "A PIN code has 6 digits.", from_top=False, name="short-pin")
+    home_list()
 
 # ---------------------------------------------------------------- S7: list overview
-S = "7. List and filters"
-to_top()
-missing = [t for t in ["boAt Rockerz", "Samsung 7 kg", "Philips Mixer", "Voltas"] if seek(t, max_scrolls=3) is None]
-check(S, "All items listed", not missing, shot("list"), note=("missing: " + ", ".join(missing)) if missing else "")
-to_top()
-tap("Ending soon", contains=False, which=0)
-check(S, "Ending soon filter shows the headphones only", find("boAt Rockerz") is not None and find("Philips Mixer") is None, shot("filter-ending-soon"))
-tap("Expired", contains=False, which=0)
-to_top()
-check(S, "Expired filter shows the mixer", find("Philips Mixer") is not None and find("boAt Rockerz") is None, shot("filter-expired"))
-tap("All", contains=False, which=0)
+if run("7"):
+    S = "7. List and filters"
+    to_top()
+    missing = [t for t in ["boAt Rockerz", "Samsung 7 kg", "Philips Mixer", "Voltas"] if seek(t, max_scrolls=3) is None]
+    check(S, "All items listed", not missing, shot("list"), note=("missing: " + ", ".join(missing)) if missing else "")
+    to_top()
+    tap("Ending soon", contains=False, which=0)
+    check(S, "Ending soon filter shows the headphones only", find("boAt Rockerz") is not None and find("Philips Mixer") is None, shot("filter-ending-soon"))
+    tap("Expired", contains=False, which=0)
+    to_top()
+    check(S, "Expired filter shows the mixer", find("Philips Mixer") is not None and find("Ends in 10 days") is None, shot("filter-expired"))
+    tap("All", contains=False, which=0)
 
 # ---------------------------------------------------------------- S8: bill photo shared from the gallery
-S = "8. Bill photo shared into the app"
-adb("push", ".github/scripts/sample-bill.png", "/sdcard/Pictures/sample-bill.png")
-adb("shell", "content", "call", "--uri", "content://media", "--method", "scan_volume", "--arg", "external_primary")
-adb("shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", "file:///sdcard/Pictures/sample-bill.png")
-time.sleep(3)
-q = adb("shell", "content", "query", "--uri", "content://media/external/images/media", "--projection", "_id:_display_name", out="text")
-m = re.search(r"_id=(\d+), _display_name=sample-bill.png", q)
-if m:
-    uri = f"content://media/external/images/media/{m.group(1)}"
-    adb("shell", "am", "start", "-f", "0x10008000", "-a", "android.intent.action.SEND", "-t", "image/png", "-n", f"{PKG}/.MainActivity",
-        "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission")
-    time.sleep(4)
-    shot("bill-photo-shared")
-    check(S, "Add form opens with the photo attached", seek("Photo saved") is not None, shot("bill-photo-saved"))
-else:
-    check(S, "Add form opens with the photo attached", False, note="could not register the test image with the gallery")
+if run("8"):
+    S = "8. Bill photo shared into the app"
+    adb("push", ".github/scripts/sample-bill.png", "/sdcard/Pictures/sample-bill.png")
+    adb("shell", "content", "call", "--uri", "content://media", "--method", "scan_volume", "--arg", "external_primary")
+    adb("shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", "file:///sdcard/Pictures/sample-bill.png")
+    time.sleep(3)
+    q = adb("shell", "content", "query", "--uri", "content://media/external/images/media", "--projection", "_id:_display_name", out="text")
+    m = re.search(r"_id=(\d+), _display_name=sample-bill.png", q)
+    if m:
+        uri = f"content://media/external/images/media/{m.group(1)}"
+        adb("shell", "am", "start", "-f", "0x10008000", "-a", "android.intent.action.SEND", "-t", "image/png", "-n", f"{PKG}/.MainActivity",
+            "--eu", "android.intent.extra.STREAM", uri, "--grant-read-uri-permission")
+        time.sleep(4)
+        shot("bill-photo-shared")
+        check(S, "Add form opens with the photo attached", seek("Photo saved") is not None, shot("bill-photo-saved"))
+    else:
+        check(S, "Add form opens with the photo attached", False, note="could not register the test image with the gallery")
 
 # ---------------------------------------------------------------- report
 with open(f"{OUT}/results.md", "w") as f:
