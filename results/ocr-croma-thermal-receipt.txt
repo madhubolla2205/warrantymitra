@@ -1,0 +1,20 @@
+--------- beginning of main
+CROMA
+Infiniti Retail Limited
+Croma - Inorbit Mall, Madhapur
+Hyde rabad 500081
+GSTIN: 36AACCV1726H 1ZJ
+TAX INVOICE
+Bill No: C412/2526/0l8834
+Date: 05/10/2025 18:42
+Cust: RAVI Mob: 98xxXXXX21
+Description   Qty   Amount
+SONY WH-1000XM5 BLK   1   29990. 00
+HSN 85183000
+Total Qty: 1
+Net Amount :   29,990.00
+Paid by: HDFC CREDIT CARD
+29,990.00
+Warranty: 1 Year from invoice date
+Thank you for shopping at Croma
+WwW.Croma. Com   1800 572 7662

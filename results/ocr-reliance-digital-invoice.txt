@@ -1,0 +1,11 @@
+--------- beginning of main
+Reliance Digital
+Reliance Retail Ltd
+Store: RD Kukatpally, Hyderabad 500072
+Tax Invoice
+Invoice No : 251ORD4471000129
+Invoice Dt : 14-Sep-2025
+Description   Qty   Net Amt
+Samsung 253L 3 Star Frost Free Refrigerator RT28C3053S8   1   24490.00
+Total Amount Payable : Rs 24,490.00
+Warranty: 1 Year on product, 20 Years on compressor
