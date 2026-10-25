@@ -309,7 +309,13 @@ private fun NextSteps(it: Item, c: Coverage, v: Verdict) {
             Step("You bought this $daysSince days ago. ${it.platform.ifBlank { "The site" }} may still accept a return or replacement, which is faster than a repair.")
             ORDER_LINKS[it.platform]?.let { url -> OutlinedButton(onClick = { context.openUrl(url) }) { Text("Open your orders") } }
         }
-        if (v.claimWithPlan) Step("Raise the claim with ${it.planProvider.ifBlank { "your plan provider" }}, since the maker's warranty has ended.")
+        if (v.claimWithPlan) {
+            val provider = it.planProvider.ifBlank { "your plan provider" }
+            Step(
+                if (c.inMaker) "Raise the claim with $provider, not the brand. The maker's warranty doesn't cover this kind of damage, but your plan does."
+                else "Raise the claim with $provider, since the maker's warranty has ended.",
+            )
+        }
         else {
             Step("Register a complaint with $brand and note the complaint number in the tracker below.")
             OutlinedButton(onClick = { context.openUrl("https://www.google.com/search?q=" + android.net.Uri.encode("$brand official customer care India register complaint")) }) {
