@@ -1,0 +1,50 @@
+name: App scenarios
+
+# Drives the debug app on an emulator through real-life scenarios and saves results/results.md
+# plus screenshots to the scenario-results branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: [test-scenarios]
+
+permissions:
+  contents: write
+
+jobs:
+  scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: adb install -r android/app/build/outputs/apk/debug/app-debug.apk && python3 .github/scripts/scenarios.py
+      - name: Publish results to the scenario-results branch
+        if: always()
+        run: |
+          git config user.name madhubolla2205
+          git config user.email madhubolla22@gmail.com
+          mkdir -p /tmp/out && cp -r results /tmp/out/ || exit 0
+          git checkout --orphan scenario-results-tmp
+          git rm -rfq --cached . && git clean -fdxq
+          cp -r /tmp/out/results . && git add results
+          git commit -qm "Scenario results for ${GITHUB_SHA::7}"
+          git push -f origin HEAD:scenario-results
