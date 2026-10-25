@@ -5,6 +5,9 @@ on:
     branches: [app-screenshots]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   screenshots:
     runs-on: ubuntu-latest
@@ -36,3 +39,11 @@ jobs:
         with:
           name: app-screens
           path: screens/
+      - name: Commit screenshots to this branch
+        if: always()
+        run: |
+          git config user.name madhubolla2205
+          git config user.email madhubolla22@gmail.com
+          git add screens
+          git commit -m "Add app screenshots [skip ci]" || exit 0
+          git push
